@@ -22,10 +22,10 @@ func init() {
 	writeCmd.Flags().String("type", "", "Entry type: start, checkpoint, break, finish (required)")
 	writeCmd.Flags().String("content", "", "Entry content (required)")
 	writeCmd.Flags().String("next", "", "Next task description")
-	writeCmd.MarkFlagRequired("project")
-	writeCmd.MarkFlagRequired("branch")
-	writeCmd.MarkFlagRequired("type")
-	writeCmd.MarkFlagRequired("content")
+	_ = writeCmd.MarkFlagRequired("project")
+	_ = writeCmd.MarkFlagRequired("branch")
+	_ = writeCmd.MarkFlagRequired("type")
+	_ = writeCmd.MarkFlagRequired("content")
 	rootCmd.AddCommand(writeCmd)
 }
 

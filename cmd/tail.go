@@ -19,8 +19,8 @@ func init() {
 	tailCmd.Flags().String("project", "", "Project name (required)")
 	tailCmd.Flags().String("branch", "", "Branch name (required)")
 	tailCmd.Flags().Int("limit", 1, "Number of entries to return")
-	tailCmd.MarkFlagRequired("project")
-	tailCmd.MarkFlagRequired("branch")
+	_ = tailCmd.MarkFlagRequired("project")
+	_ = tailCmd.MarkFlagRequired("branch")
 	rootCmd.AddCommand(tailCmd)
 }
 

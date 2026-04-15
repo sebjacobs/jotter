@@ -39,7 +39,7 @@ func ReadEntries(path string) ([]Entry, error) {
 		}
 		return nil, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var entries []Entry
 	scanner := bufio.NewScanner(f)
