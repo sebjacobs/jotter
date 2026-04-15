@@ -421,3 +421,168 @@ func TestLs_UnknownProjectExitsWithError(t *testing.T) {
 		t.Error("expected non-zero exit code")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// search command
+// ---------------------------------------------------------------------------
+
+// populateSearchData creates entries across multiple projects/branches for search tests.
+func populateSearchData(t *testing.T, dir string) {
+	t.Helper()
+	runs := []struct {
+		project, branch, typ, content, next string
+	}{
+		{"proj-a", "main", "start", "Implementing auth flow", ""},
+		{"proj-a", "main", "checkpoint", "Added token refresh logic", ""},
+		{"proj-a", "feature", "start", "Setting up database migrations", ""},
+		{"proj-b", "main", "finish", "Deployed auth service", "Monitor error rates"},
+	}
+	for _, r := range runs {
+		args := []string{
+			"write", "--project", r.project, "--branch", r.branch,
+			"--type", r.typ, "--content", r.content,
+		}
+		if r.next != "" {
+			args = append(args, "--next", r.next)
+		}
+		runJotter(t, dir, args...)
+	}
+}
+
+func TestSearch_ByTerm(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "auth")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "auth flow") || !strings.Contains(stdout, "auth service") {
+		t.Errorf("missing auth entries: %s", stdout)
+	}
+	if strings.Contains(stdout, "database migrations") {
+		t.Errorf("should not contain non-matching entry: %s", stdout)
+	}
+}
+
+func TestSearch_CaseInsensitive(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "AUTH")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "auth flow") {
+		t.Errorf("case-insensitive search failed: %s", stdout)
+	}
+}
+
+func TestSearch_IncludesNextField(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "error rates")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Deployed auth service") {
+		t.Errorf("should find entry via next field: %s", stdout)
+	}
+}
+
+func TestSearch_ScopedByProject(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "auth", "--project", "proj-a")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "auth flow") {
+		t.Errorf("missing proj-a entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "auth service") {
+		t.Errorf("should not contain proj-b entry: %s", stdout)
+	}
+}
+
+func TestSearch_ScopedByProjectAndBranch(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "auth", "--project", "proj-a", "--branch", "main")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "auth flow") {
+		t.Errorf("missing entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "database migrations") {
+		t.Errorf("should not contain other branch entry: %s", stdout)
+	}
+}
+
+func TestSearch_ScopedByType(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "auth", "--type", "finish")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Deployed auth service") {
+		t.Errorf("missing finish entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "auth flow") {
+		t.Errorf("should not contain non-finish entries: %s", stdout)
+	}
+}
+
+func TestSearch_ScopedBySince(t *testing.T) {
+	dir := initDataDir(t)
+	// Write entries with known timestamps directly
+	os.MkdirAll(filepath.Join(dir, "logs", "proj"), 0o755)
+	jsonlFile := filepath.Join(dir, "logs", "proj", "main.jsonl")
+	old := `{"timestamp":"2026-01-01T10:00:00","type":"start","content":"Old auth work"}`
+	recent := `{"timestamp":"2026-04-10T10:00:00","type":"checkpoint","content":"Recent auth work"}`
+	os.WriteFile(jsonlFile, []byte(old+"\n"+recent+"\n"), 0o644)
+
+	stdout, _, code := runJotter(t, dir, "search", "auth", "--since", "2026-04-01")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Recent auth work") {
+		t.Errorf("missing recent entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "Old auth work") {
+		t.Errorf("should not contain old entry: %s", stdout)
+	}
+}
+
+func TestSearch_WithoutTermReturnsAll(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "--type", "finish")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Deployed auth service") {
+		t.Errorf("missing entry: %s", stdout)
+	}
+}
+
+func TestSearch_ProvenancePrefix(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "database")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "[proj-a/feature.jsonl]") {
+		t.Errorf("missing provenance prefix: %s", stdout)
+	}
+}
+
+func TestSearch_NoResults(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	_, _, code := runJotter(t, dir, "search", "nonexistent term")
+	if code == 0 {
+		t.Error("expected non-zero exit code for no results")
+	}
+}
