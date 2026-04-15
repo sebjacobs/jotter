@@ -12,4 +12,5 @@
 
 ## Later
 
+- [ ] ASCII art Jotter the Otter for installer/CLI banner
 - [ ] `jotter prune` command — clean up old/test entries
