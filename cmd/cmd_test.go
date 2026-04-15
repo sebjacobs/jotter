@@ -6,7 +6,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -333,5 +335,89 @@ func TestTail_TimestampInHeading(t *testing.T) {
 		"tail", "--project", "proj", "--branch", "main")
 	if !regexp.MustCompile(`## \d{4}-\d{2}-\d{2} \d{2}:\d{2} \| start`).MatchString(stdout) {
 		t.Errorf("timestamp heading not found: %s", stdout)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// ls command
+// ---------------------------------------------------------------------------
+
+func TestLs_ListsProjects(t *testing.T) {
+	dir := initDataDir(t)
+	for _, project := range []string{"alpha", "beta", "gamma"} {
+		runJotter(t, dir,
+			"write", "--project", project, "--branch", "main",
+			"--type", "start", "--content", "hello")
+	}
+	stdout, _, code := runJotter(t, dir, "ls")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 lines, got %d: %s", len(lines), stdout)
+	}
+	names := make([]string, len(lines))
+	for i, line := range lines {
+		names[i] = strings.Fields(line)[0]
+	}
+	sort.Strings(names)
+	if !reflect.DeepEqual(names, []string{"alpha", "beta", "gamma"}) {
+		t.Errorf("project names = %v", names)
+	}
+	for _, line := range lines {
+		if !strings.Contains(line, "(last:") {
+			t.Errorf("missing last activity: %s", line)
+		}
+	}
+}
+
+func TestLs_ListsBranchesForProject(t *testing.T) {
+	dir := initDataDir(t)
+	for _, branch := range []string{"main", "feature-auth", "feature-ui"} {
+		runJotter(t, dir,
+			"write", "--project", "my-app", "--branch", branch,
+			"--type", "start", "--content", "hello")
+	}
+	stdout, _, code := runJotter(t, dir, "ls", "--project", "my-app")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "feature-auth") || !strings.Contains(stdout, "feature-ui") || !strings.Contains(stdout, "main") {
+		t.Errorf("missing branches: %s", stdout)
+	}
+}
+
+func TestLs_BranchListingShowsCountAndDate(t *testing.T) {
+	dir := initDataDir(t)
+	for range 3 {
+		runJotter(t, dir,
+			"write", "--project", "proj", "--branch", "main",
+			"--type", "checkpoint", "--content", "entry")
+	}
+	stdout, _, _ := runJotter(t, dir, "ls", "--project", "proj")
+	if !strings.Contains(stdout, "3 entries") {
+		t.Errorf("missing entry count: %s", stdout)
+	}
+	if !strings.Contains(stdout, "last:") {
+		t.Errorf("missing last date: %s", stdout)
+	}
+}
+
+func TestLs_NoProjectsExitsWithError(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "logs"), 0o755)
+	_, _, code := runJotter(t, dir, "ls")
+	if code == 0 {
+		t.Error("expected non-zero exit code")
+	}
+}
+
+func TestLs_UnknownProjectExitsWithError(t *testing.T) {
+	dir := t.TempDir()
+	os.MkdirAll(filepath.Join(dir, "logs"), 0o755)
+	_, _, code := runJotter(t, dir, "ls", "--project", "nonexistent")
+	if code == 0 {
+		t.Error("expected non-zero exit code")
 	}
 }
