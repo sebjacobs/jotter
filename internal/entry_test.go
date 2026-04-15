@@ -129,6 +129,67 @@ func TestFormatEntry_WithNext(t *testing.T) {
 	}
 }
 
+func TestMarshalJSONL_MatchesPythonFormat(t *testing.T) {
+	e := Entry{
+		Timestamp: "2026-04-11T10:30:00",
+		Type:      "start",
+		Content:   "Hello world",
+	}
+	data, err := MarshalJSONL(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"timestamp": "2026-04-11T10:30:00", "type": "start", "content": "Hello world"}`
+	if string(data) != want {
+		t.Errorf("got:  %s\nwant: %s", data, want)
+	}
+}
+
+func TestMarshalJSONL_WithNext(t *testing.T) {
+	e := Entry{
+		Timestamp: "2026-04-11T10:30:00",
+		Type:      "finish",
+		Content:   "Done",
+		Next:      "Continue tomorrow",
+	}
+	data, err := MarshalJSONL(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := `{"timestamp": "2026-04-11T10:30:00", "type": "finish", "content": "Done", "next": "Continue tomorrow"}`
+	if string(data) != want {
+		t.Errorf("got:  %s\nwant: %s", data, want)
+	}
+}
+
+func TestMarshalJSONL_OmitsNextWhenEmpty(t *testing.T) {
+	e := Entry{
+		Timestamp: "2026-04-11T10:30:00",
+		Type:      "start",
+		Content:   "Hello",
+	}
+	data, _ := MarshalJSONL(e)
+	if strings.Contains(string(data), "next") {
+		t.Errorf("should not contain next: %s", data)
+	}
+}
+
+func TestMarshalJSONL_EscapesNewlines(t *testing.T) {
+	e := Entry{
+		Timestamp: "2026-04-11T10:30:00",
+		Type:      "checkpoint",
+		Content:   "Line one\nLine two",
+	}
+	data, _ := MarshalJSONL(e)
+	// Should be a single line with escaped newline
+	if strings.Contains(string(data), "\n") {
+		t.Errorf("should not contain literal newline: %s", data)
+	}
+	if !strings.Contains(string(data), `\n`) {
+		t.Errorf("should contain escaped newline: %s", data)
+	}
+}
+
 func TestValidEntryTypes(t *testing.T) {
 	for _, typ := range []string{"start", "checkpoint", "break", "finish"} {
 		if !IsValidEntryType(typ) {

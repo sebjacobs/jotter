@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -60,7 +59,7 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		entry.Next = next
 	}
 
-	data, err := json.Marshal(entry)
+	data, err := internal.MarshalJSONL(entry)
 	if err != nil {
 		return fmt.Errorf("marshaling entry: %w", err)
 	}

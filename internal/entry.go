@@ -57,6 +57,30 @@ func ReadEntries(path string) ([]Entry, error) {
 	return entries, scanner.Err()
 }
 
+// MarshalJSONL serialises an entry as a single JSON line with Python-compatible
+// spacing (spaces after : and ,) to match json.dumps default output.
+func MarshalJSONL(e Entry) ([]byte, error) {
+	return marshalPythonCompat(e)
+}
+
+// marshalPythonCompat builds JSON matching Python's json.dumps default separators.
+func marshalPythonCompat(e Entry) ([]byte, error) {
+	parts := []string{
+		fmt.Sprintf(`"timestamp": %s`, quote(e.Timestamp)),
+		fmt.Sprintf(`"type": %s`, quote(e.Type)),
+		fmt.Sprintf(`"content": %s`, quote(e.Content)),
+	}
+	if e.Next != "" {
+		parts = append(parts, fmt.Sprintf(`"next": %s`, quote(e.Next)))
+	}
+	return []byte("{" + strings.Join(parts, ", ") + "}"), nil
+}
+
+func quote(s string) string {
+	b, _ := json.Marshal(s)
+	return string(b)
+}
+
 // FormatEntry renders an entry as markdown.
 func FormatEntry(e Entry) string {
 	t, _ := time.Parse(time.RFC3339, e.Timestamp)
