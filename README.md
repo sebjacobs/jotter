@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/jotter-the-otter.png" width="160" alt="Jotter the Otter — a sea otter floating on its back holding a notebook">
+</p>
+
 # Jotter
 
 Append-only session log tool for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions. Stores structured JSONL entries in a git-backed data repository, one file per branch.
