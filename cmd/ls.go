@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/sebjacobs/jotter/internal"
 	"github.com/spf13/cobra"
 )
@@ -85,11 +86,13 @@ func lsBranches(logsDir, project string) error {
 		return branches[i].lastTS > branches[j].lastTS
 	})
 
+	bold := color.New(color.Bold).SprintFunc()
+	dim := color.New(color.Faint).SprintFunc()
 	for _, b := range branches {
 		if b.lastDate != "" {
-			fmt.Printf("%s  (%d entries, last: %s)\n", b.name, b.count, b.lastDate)
+			fmt.Printf("%s  %s\n", bold(b.name), dim(fmt.Sprintf("(%d entries, last: %s)", b.count, b.lastDate)))
 		} else {
-			fmt.Println(b.name)
+			fmt.Println(bold(b.name))
 		}
 	}
 	return nil
@@ -132,11 +135,13 @@ func lsProjects(logsDir string) error {
 		return projects[i].lastTS > projects[j].lastTS
 	})
 
+	boldP := color.New(color.Bold).SprintFunc()
+	dimP := color.New(color.Faint).SprintFunc()
 	for _, p := range projects {
 		if p.lastDate != "" {
-			fmt.Printf("%s  (last: %s)\n", p.name, p.lastDate)
+			fmt.Printf("%s  %s\n", boldP(p.name), dimP(fmt.Sprintf("(last: %s)", p.lastDate)))
 		} else {
-			fmt.Println(p.name)
+			fmt.Println(boldP(p.name))
 		}
 	}
 	return nil

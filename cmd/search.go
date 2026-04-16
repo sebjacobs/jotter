@@ -88,7 +88,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			results = append(results, fmt.Sprintf("[%s]\n%s", rel, internal.FormatEntry(entry)))
+			results = append(results, fmt.Sprintf("%s\n%s", internal.Dim("["+rel+"]"), internal.FormatEntry(entry)))
 		}
 	}
 

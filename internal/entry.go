@@ -82,17 +82,18 @@ func quote(s string) string {
 	return string(b)
 }
 
-// FormatEntry renders an entry as markdown.
+// FormatEntry renders an entry as markdown with color.
+// Colors are automatically disabled when output is not a terminal.
 func FormatEntry(e Entry) string {
 	t, _ := time.Parse(time.RFC3339, e.Timestamp)
 	if t.IsZero() {
 		t, _ = time.Parse("2006-01-02T15:04:05", e.Timestamp)
 	}
-	heading := fmt.Sprintf("## %s | %s", t.Format("2006-01-02 15:04"), e.Type)
+	heading := fmt.Sprintf("## %s | %s", Dim(t.Format("2006-01-02 15:04")), ColorType(e.Type))
 
 	lines := []string{heading, "", e.Content}
 	if e.Next != "" {
-		lines = append(lines, "", fmt.Sprintf("**Next:** %s", e.Next))
+		lines = append(lines, "", fmt.Sprintf("%s %s", Bold("Next:"), e.Next))
 	}
 	return strings.Join(lines, "\n")
 }
