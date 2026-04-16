@@ -1,11 +1,11 @@
 ---
 name: setup-jotter
-description: Set up jotter — install the binary, configure the data repo, add Claude Code permissions, and install session management skills. Use when setting up jotter for the first time.
+description: Set up jotter — configure the data repo and add Claude Code permissions. Use when setting up jotter for the first time after installing the plugin.
 ---
 
 # Setup Jotter
 
-Guided setup for jotter — the append-only session log tool for Claude Code. Walks through installation, configuration, and skill setup step by step.
+Post-install setup for the jotter plugin. The plugin delivers the binary and skills automatically — this skill handles the user-specific configuration that can't be automated.
 
 Each step checks preconditions before acting — safe to re-run if setup was interrupted.
 
@@ -13,32 +13,7 @@ Each step checks preconditions before acting — safe to re-run if setup was int
 
 ## Steps
 
-### 1 — Install the binary
-
-Check if `jotter` is already available:
-
-```bash
-which jotter && jotter --help
-```
-
-If not found, ask the user which install method they prefer:
-
-> "Jotter isn't on your PATH yet. How would you like to install it?"
->
-> 1. **`go install`** (requires Go): `go install github.com/sebjacobs/jotter@latest`
-> 2. **Download a release binary** from GitHub (no Go required)
-
-Run their chosen method, then verify:
-
-```bash
-jotter --help
-```
-
-If it still fails, check `$GOPATH/bin` is on PATH and suggest adding it.
-
----
-
-### 2 — Choose or create the data repo
+### 1 — Choose or create the data repo
 
 Jotter stores session logs as JSONL files in a git repository. Ask the user:
 
@@ -75,7 +50,7 @@ gh repo create <repo-name> --private --source=. --push
 
 ---
 
-### 3 — Write the config file
+### 2 — Write the config file
 
 Write the data directory path to `~/.config/jotter/config`:
 
@@ -94,7 +69,7 @@ This should run without error (may show "no projects found" if the repo is empty
 
 ---
 
-### 4 — Add Claude Code permission
+### 3 — Add Claude Code permission
 
 Jotter needs to run as a Bash command without requiring approval each time. Add the permission to the user's Claude Code settings:
 
@@ -124,28 +99,7 @@ else:
 
 ---
 
-### 5 — Install session skills
-
-Copy the session management skills into the user's Claude Code skills directory:
-
-```bash
-JOTTER_REPO="$(cd "$(dirname "$0")/.." && pwd)"
-SKILLS_DIR="$HOME/.claude/skills"
-
-for skill in start-session finish-session save-session break-session recover-session; do
-  mkdir -p "$SKILLS_DIR/$skill"
-  cp "$JOTTER_REPO/skills/$skill/SKILL.md" "$SKILLS_DIR/$skill/SKILL.md"
-  echo "Installed $skill"
-done
-```
-
-Tell the user:
-
-> "Installed 5 skills: `/start`, `/finish`, `/save`, `/break`, `/recover`. These manage your session lifecycle — start and end every coding session with `/start` and `/finish`."
-
----
-
-### 6 — Smoke test
+### 4 — Smoke test
 
 Run a quick end-to-end test to verify everything works:
 

@@ -1,0 +1,12 @@
+{
+  "name": "jotter",
+  "version": "0.1.0",
+  "description": "Append-only session logging for Claude Code — capture starts, checkpoints, breaks, and finishes as JSONL entries in a git-backed data repo.",
+  "author": {
+    "name": "Seb Jacobs",
+    "url": "https://github.com/sebjacobs"
+  },
+  "repository": "https://github.com/sebjacobs/jotter",
+  "license": "MIT",
+  "keywords": ["session", "logging", "productivity"]
+}
