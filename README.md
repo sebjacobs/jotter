@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/jotter-the-otter.png" width="160" alt="Jotter the Otter — a sea otter floating on its back holding a notebook">
+  <img src="assets/jotter-the-otter-small.png" width="160" alt="Jotter the Otter — a sea otter floating on its back holding a notebook">
 </p>
 
 # Jotter
