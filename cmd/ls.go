@@ -66,7 +66,7 @@ func lsBranches(logsDir, project string) error {
 	matches, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
 	var branches []branchInfo
 	for _, path := range matches {
-		name := strings.TrimSuffix(filepath.Base(path), ".jsonl")
+		name := internal.UnsanitiseBranch(strings.TrimSuffix(filepath.Base(path), ".jsonl"))
 		entries, err := internal.ReadEntries(path)
 		if err != nil {
 			continue
