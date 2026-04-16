@@ -5,7 +5,7 @@ description: Set up jotter — configure the data repo and add Claude Code permi
 
 # Setup Jotter
 
-Post-install setup for the jotter plugin. The plugin delivers the binary and skills automatically — this skill handles the user-specific configuration that can't be automated.
+Post-install setup for the jotter plugin. The plugin delivers the skills; this skill installs the `jotter` binary and handles the user-specific configuration (data repo, config file, Claude Code permissions).
 
 Each step checks preconditions before acting — safe to re-run if setup was interrupted.
 
@@ -13,7 +13,54 @@ Each step checks preconditions before acting — safe to re-run if setup was int
 
 ## Steps
 
-### 1 — Choose or create the data repo
+### 1 — Install the `jotter` binary
+
+Check whether `jotter` is already on `PATH`:
+
+```bash
+command -v jotter
+```
+
+If present, skip to step 2.
+
+Otherwise, check for a Go toolchain:
+
+```bash
+command -v go
+```
+
+**If Go is missing,** stop and tell the user:
+
+> "Jotter is built from source and needs Go 1.22+. Install it first:
+> - macOS: `brew install go`
+> - Linux: use your distro's package manager, or download from https://go.dev/dl/
+> - Other: https://go.dev/dl/
+>
+> Then re-run `/setup-jotter`."
+
+**If Go is present,** install jotter:
+
+```bash
+go install github.com/sebjacobs/jotter@latest
+```
+
+Verify the binary is callable:
+
+```bash
+command -v jotter
+```
+
+If the above prints nothing, the Go bin dir isn't on `PATH`. Tell the user which shell rc file to update:
+
+```bash
+echo "Add this to your shell rc: export PATH=\"$(go env GOPATH)/bin:\$PATH\""
+```
+
+Then have them open a new shell (or `source` the rc file) and re-check `command -v jotter` before moving on.
+
+---
+
+### 2 — Choose or create the data repo
 
 Jotter stores session logs as JSONL files in a git repository. Ask the user:
 
@@ -50,7 +97,7 @@ gh repo create <repo-name> --private --source=. --push
 
 ---
 
-### 2 — Write the config file
+### 3 — Write the config file
 
 Write the data directory path to `~/.config/jotter/config`:
 
@@ -69,37 +116,39 @@ This should run without error (may show "no projects found" if the repo is empty
 
 ---
 
-### 3 — Add Claude Code permission
+### 4 — Add Claude Code permission
 
-Jotter needs to run as a Bash command without requiring approval each time. Add the permission to the user's Claude Code settings:
+Jotter needs to run as a Bash command without requiring approval each time. Add `Bash(jotter *)` to the user's Claude Code settings.
+
+Ensure the settings file exists (create with an empty JSON object if missing):
 
 ```bash
-cat ~/.claude/settings.json
+mkdir -p ~/.claude
+[ -f ~/.claude/settings.json ] || echo '{}' > ~/.claude/settings.json
 ```
 
-Check if `Bash(jotter *)` is already in the `permissions.allow` list. If not, add it:
+Then merge the permission in idempotently:
 
 ```bash
-# Read current settings, add permission, write back
 python3 -c "
-import json
-path = '$HOME/.claude/settings.json'
-with open(path) as f:
-    settings = json.load(f)
+import json, pathlib
+path = pathlib.Path.home() / '.claude' / 'settings.json'
+settings = json.loads(path.read_text() or '{}')
 perms = settings.setdefault('permissions', {}).setdefault('allow', [])
-if 'Bash(jotter *)' not in perms:
-    perms.append('Bash(jotter *)')
-    with open(path, 'w') as f:
-        json.dump(settings, f, indent=2)
-    print('Added Bash(jotter *) permission')
+if 'Bash(jotter *)' in perms:
+    print('Permission already present')
 else:
-    print('Permission already exists')
+    perms.append('Bash(jotter *)')
+    path.write_text(json.dumps(settings, indent=2) + '\n')
+    print('Added Bash(jotter *) permission')
 "
 ```
 
+If `python3` isn't available, ask the user to add `\"Bash(jotter *)\"` to the `permissions.allow` array in `~/.claude/settings.json` manually.
+
 ---
 
-### 4 — Smoke test
+### 5 — Smoke test
 
 Run a quick end-to-end test to verify everything works:
 
@@ -108,7 +157,7 @@ jotter write --project _setup-test --branch main --type start --content "Setup v
 jotter tail --project _setup-test --branch main --limit 1
 ```
 
-If both commands succeed, the setup is complete. The test entry will remain in the logs — it's harmless.
+If both commands succeed, the setup is complete. The test entry stays in the `_setup-test` project — harmless, and `jotter ls` will still group it separately from real work.
 
 ---
 

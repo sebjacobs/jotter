@@ -2,7 +2,6 @@
 
 ## Now
 
-- [ ] CI release workflow (GoReleaser) to build cross-platform binaries
 - [ ] Raise PR for feature/install-plugin branch
 
 ## Next
