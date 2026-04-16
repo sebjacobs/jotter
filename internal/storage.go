@@ -11,6 +11,11 @@ func SanitiseBranch(branch string) string {
 	return strings.ReplaceAll(branch, "/", "+")
 }
 
+// UnsanitiseBranch reverses SanitiseBranch, restoring / from +.
+func UnsanitiseBranch(branch string) string {
+	return strings.ReplaceAll(branch, "+", "/")
+}
+
 // JSONLPath returns the path to a branch's JSONL log file.
 func JSONLPath(dataDir, project, branch string) string {
 	return filepath.Join(dataDir, "logs", project, SanitiseBranch(branch)+".jsonl")
