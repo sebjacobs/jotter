@@ -5,11 +5,13 @@ Append-only session log tool for Claude Code sessions. Go rewrite of the Python 
 ## Build & test
 
 ```bash
-go build -o jotter .        # build binary
+make build                   # build binary to bin/jotter
 go test ./...                # run all tests (52 tests)
 go test ./cmd/               # command-level integration tests
-go test ./internal/           # unit tests for config, entry, storage
+go test ./internal/          # unit tests for config, entry, storage
 ```
+
+Local build output goes to `bin/jotter` (gitignored). Tests build their own binary into a temp dir via `TestMain`, independent of any local build.
 
 Tests build the binary once via `TestMain` and run it as a subprocess with a temp git-backed data dir. No mocks.
 
