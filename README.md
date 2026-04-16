@@ -8,6 +8,17 @@ Append-only session log tool for [Claude Code](https://docs.anthropic.com/en/doc
 
 ## Install
 
+### As a Claude Code plugin (recommended)
+
+```
+/plugin marketplace add sebjacobs/jotter
+/plugin install jotter@sebjacobs-jotter
+```
+
+This installs the session-management skills (`/start`, `/save`, `/break`, `/finish`, `/recover`) and a `/setup-jotter` skill that walks through binary install, data repo setup, and Claude Code permissions.
+
+### Standalone binary
+
 ```bash
 go install github.com/sebjacobs/jotter@latest
 ```

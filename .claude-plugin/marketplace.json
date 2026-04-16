@@ -1,0 +1,14 @@
+{
+  "name": "sebjacobs-jotter",
+  "owner": {
+    "name": "Seb Jacobs",
+    "url": "https://github.com/sebjacobs"
+  },
+  "plugins": [
+    {
+      "name": "jotter",
+      "source": ".",
+      "description": "Append-only session logging for Claude Code — capture starts, checkpoints, breaks, and finishes as JSONL entries in a git-backed data repo."
+    }
+  ]
+}
