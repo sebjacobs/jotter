@@ -24,6 +24,13 @@ var rootCmd = &cobra.Command{
 
 func init() {
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
+	rootCmd.PersistentFlags().BoolP("version", "v", false, "print version information and exit")
+	rootCmd.PersistentPreRun = func(cmd *cobra.Command, _ []string) {
+		if v, _ := cmd.Flags().GetBool("version"); v {
+			fmt.Println(versionString())
+			os.Exit(0)
+		}
+	}
 }
 
 func Execute(fs embed.FS) {
