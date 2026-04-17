@@ -26,6 +26,18 @@ go install github.com/sebjacobs/jotter@latest
 
 Binaries built this way report `jotter dev` for `--version`; release tags only land in binaries from the prebuilt flow above.
 
+## Setup
+
+Once `jotter` is on your PATH, the fastest way to wire it into Claude Code is the interactive setup wizard:
+
+```bash
+jotter setup
+```
+
+It takes you through seven steps in one go — detects Claude Code, prompts for a data directory (default `~/session-logs-data`), initialises it as a git repo, optionally wires a git remote, writes your `~/.jotter` config, installs the session-management skills (`/start`, `/save`, `/finish`, `/break`, `/recover`), grants the `Bash(jotter:*)` permission in `~/.claude/settings.json`, and runs a write-and-read-back smoke test. Re-running is idempotent — it detects existing state and only updates what's changed.
+
+If you'd rather wire things up by hand, the `Configuration` section below describes the same artefacts the wizard produces.
+
 ## Configuration
 
 Jotter is configured via a `.jotter` TOML file. Drop one in your home directory for a global default, and optionally one at the root of any project that should use a different data dir:
@@ -130,6 +142,21 @@ Each line is a JSON object:
 ```
 
 JSON uses Python-compatible spacing (`, ` and `: ` separators) for compatibility with the original Python implementation.
+
+## Development
+
+Clone the repo and build from source:
+
+```bash
+git clone https://github.com/sebjacobs/jotter.git
+cd jotter
+go build -o bin/jotter .     # binary goes to bin/, not the repo root
+go test ./...                # run the full suite
+```
+
+Architecture breakdown — what lives where (skills, commands, internal packages) — is documented in [`CLAUDE.md`](CLAUDE.md). Release process (cutting a tagged release, bumping the changelog) is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+Local builds report `jotter dev` for `--version`; real version info (semver tag, commit SHA, build date) is stamped in via `-ldflags` only on GoReleaser builds from tag pushes.
 
 ## License
 

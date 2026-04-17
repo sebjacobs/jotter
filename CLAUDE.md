@@ -6,9 +6,10 @@ Append-only session log tool for Claude Code sessions. Go rewrite of the Python 
 
 ```bash
 go build -o bin/jotter .     # build binary (always output to bin/, not repo root)
-go test ./...                # run all tests (61 tests)
+go test ./...                # run all tests (81 tests)
 go test ./cmd/               # command-level integration tests
 go test ./internal/          # unit tests for config, entry, storage
+go test ./internal/setup/    # unit tests for the setup wizard steps + framework
 ```
 
 Tests build the binary once via `TestMain` and run it as a subprocess with a temp git-backed data dir. No mocks.
@@ -18,23 +19,29 @@ Local builds get placeholder version info (`dev` / `none` / `unknown`). Release 
 ## Architecture
 
 ```
-main.go              -> cmd.Execute()
+main.go              -> //go:embed all:skills into skillsFS; cmd.Execute(skillsFS)
+skills/              -> embedded session-management SKILL.md files (start, save, finish, break, recover) — installed by `jotter setup`
 cmd/
-  root.go            -> cobra root command, --version wiring
+  root.go            -> cobra root command, --version wiring, stores skillsFS
   banner.txt         -> ASCII banner embedded into root command Long description
   version.go         -> version/commit/date vars (ldflags-stamped) + formatter
   write.go           -> append JSONL entry + git commit (+ push on finish)
   tail.go            -> read last N entries, render as markdown
-  ls.go               -> list projects/branches with metadata
+  ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
   config.go          -> print resolved .jotter data_dir for current cwd
   completion.go      -> bash/zsh/fish completion generator
+  setup.go           -> `jotter setup` wizard driver; huhPrompter (huh-backed Prompter impl)
 internal/
   config.go          -> resolve data dir by walking up from cwd for .jotter TOML files; falls back to ~/.jotter
   entry.go           -> Entry struct, JSONL marshal (Python-compatible spacing), markdown format
   storage.go         -> path construction, branch sanitisation (/ -> +), glob collection
   git.go             -> git add/commit/push via exec.Command
   color.go           -> TTY-aware ANSI colouring helpers
+  setup/
+    wizard.go        -> Step interface, State/Status enums, Context, Prompter, Run driver
+    steps.go         -> seven Step implementations + DefaultSteps()
+    settings.go      -> MergePermission for ~/.claude/settings.json
 ```
 
 ## Key conventions
