@@ -8,7 +8,23 @@ _Nothing in flight._
 
 ## Next
 
-_Nothing queued._
+### Per-repo data dir via `.jotter` file
+
+Today the data dir is resolved globally (`JOTTER_DATA` env → `~/.config/jotter/config`). That's wrong for users with a mix of private and public projects — personal notes on a private codebase shouldn't land in the same data repo as notes on a public one.
+
+**Target behaviour:** jotter walks up from cwd looking for a `.jotter` file. First one wins. A top-level `~/.jotter` is the natural global fallback — same format, same walk, the point where the walk terminates when nothing closer is found. No env var, no XDG config dir, no separate resolution mechanism: one file, one rule.
+
+**File format:** TOML, even in v1:
+
+```toml
+data_dir = "~/session-logs-private"
+```
+
+The single-key TOML looks silly today but costs nothing and leaves room for a future `backend = "sqlite"` key when pluggable storage lands. A bare-string format would need a breaking change.
+
+**Also needed:** `jotter config` (or `jotter info`) subcommand that prints the resolved data dir for the current cwd, so users can sanity-check which store they're about to write to before running `write`. Without it, "why did this entry land in the wrong place?" becomes a debugging mystery.
+
+**Migration:** no external users yet, so replace `JOTTER_DATA` env and `~/.config/jotter/config` outright — no legacy fallback. Ship a one-liner in the README explaining how to move an existing config.
 
 ## Later
 
