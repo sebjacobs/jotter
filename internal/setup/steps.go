@@ -263,12 +263,15 @@ func (smokeStep) Run(ctx *Context) (Result, error) {
 		return Result{}, err
 	}
 
-	writeArgs := []string{"write", "--project", "jotter-setup", "--branch", "smoke", "--type", "note", "--content", "jotter setup smoke test"}
+	const smokeProject = "jotter-setup"
+	const smokeBranch = "smoke"
+
+	writeArgs := []string{"write", "--project", smokeProject, "--branch", smokeBranch, "--type", "note", "--content", "jotter setup smoke test (cleaned up)"}
 	if out, err := exec.Command(exe, writeArgs...).CombinedOutput(); err != nil {
 		return Result{}, fmt.Errorf("jotter write failed: %w\n%s", err, string(out))
 	}
 
-	tailArgs := []string{"tail", "--project", "jotter-setup", "--branch", "smoke", "--limit", "1"}
+	tailArgs := []string{"tail", "--project", smokeProject, "--branch", smokeBranch, "--limit", "1"}
 	out, err := exec.Command(exe, tailArgs...).CombinedOutput()
 	if err != nil {
 		return Result{}, fmt.Errorf("jotter tail failed: %w\n%s", err, string(out))
@@ -276,7 +279,45 @@ func (smokeStep) Run(ctx *Context) (Result, error) {
 	if !strings.Contains(string(out), "smoke test") {
 		return Result{}, fmt.Errorf("smoke-test entry not found in tail output:\n%s", string(out))
 	}
-	return Result{Status: StatusOK, Message: "wrote and read back a test entry"}, nil
+
+	// Clean up the smoke test artefact — both the .jsonl file and the parent
+	// project dir (if empty), then commit the removal. Users shouldn't see a
+	// phantom "jotter-setup" project in `jotter ls` forever.
+	if cleanupErr := cleanupSmokeArtefacts(ctx.Answers.DataDir, smokeProject, smokeBranch); cleanupErr != nil {
+		// Don't fail the whole wizard on a cleanup error — the write+read
+		// succeeded, which is what the step is really verifying. Surface
+		// the cleanup issue in the result message instead.
+		return Result{Status: StatusOK, Message: fmt.Sprintf("wrote and read back a test entry (cleanup warning: %v)", cleanupErr)}, nil
+	}
+	return Result{Status: StatusOK, Message: "wrote and read back a test entry (and cleaned up)"}, nil
+}
+
+// cleanupSmokeArtefacts removes the smoke-test .jsonl and parent project dir
+// from the data repo, then commits the removal. Separate from the Run body
+// so the step stays readable and the cleanup is isolated for testing.
+func cleanupSmokeArtefacts(dataDir, project, branch string) error {
+	projectDir := filepath.Join(dataDir, "logs", project)
+	entryFile := filepath.Join(projectDir, branch+".jsonl")
+
+	if err := os.Remove(entryFile); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("removing %s: %w", entryFile, err)
+	}
+	// Remove parent dir if empty — os.Remove returns an error on non-empty
+	// dirs, which we treat as "user has other stuff here, leave it alone".
+	_ = os.Remove(projectDir)
+
+	// Commit the removal so the data repo stays consistent with the
+	// filesystem. Use -A to pick up whatever changed (the delete, plus the
+	// empty-dir removal if git tracks it).
+	if err := runGit(dataDir, "add", "-A"); err != nil {
+		return fmt.Errorf("staging cleanup: %w", err)
+	}
+	// --allow-empty covers the edge case where git had already pruned the
+	// file (e.g. previous setup run left things in a consistent state).
+	if err := runGit(dataDir, "commit", "--allow-empty", "-m", "jotter setup: clean up smoke-test artefacts"); err != nil {
+		return fmt.Errorf("committing cleanup: %w", err)
+	}
+	return nil
 }
 
 // --- helpers ---
