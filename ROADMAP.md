@@ -4,7 +4,9 @@ Living document — Now / Next / Later priorities for jotter.
 
 ## Now
 
-_Nothing in flight._
+### Relative timestamps in `jotter ls` (PR #10, draft)
+
+Show human-friendly relative times ("2h ago", "yesterday") in `jotter ls` output. Branch `feature/ls-relative-timestamps` is rebased onto main and green; ready to move out of draft once the UX is confirmed.
 
 ## Next
 
@@ -57,6 +59,8 @@ Generalise `jotter setup` beyond Claude Code to Codex, Aider, Cursor. Detect whi
 
 ## Shipped
 
+- **`justfile` + CI lint fix** (v0.2.2, PR #12 merged d2a8519) — errcheck failures on `fmt.Fprint*` in setup wizard cleared; new `justfile` with `just check` running build + test + lint locally, mirroring CI. `README.md` and `CLAUDE.md` point at it as the canonical pre-push command.
+- **Skip git push when data repo has no remote** (v0.2.1, PR #11 merged ad50d1b) — `finish` entries now probe for a remote via `GitHasRemote` before pushing, eliminating the `Warning: git push failed:` noise on local-only data repos. Real push failures against configured remotes still warn.
 - **`jotter setup` interactive wizard** (v0.2.0, merged b880730) — seven-step wizard for Claude Code onboarding; embedded session-management skills via `//go:embed`; idempotent, always-prompt-with-current-values, accept-default is a genuine no-op.
 - **`install.sh` one-line installer** (PR #8, merged 0893688) — detects OS/arch, fetches latest release, SHA-256 verifies, installs to `$HOME/.local/bin`; README rewritten to lead with it.
 - **Release infrastructure + v0.1.0** (PR #7, merged 6443caf; v0.1.0 at 43d8511) — GoReleaser, CHANGELOG, CONTRIBUTING, version stamping, GitHub Actions release workflow on `v*` tag push.
