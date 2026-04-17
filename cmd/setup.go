@@ -42,8 +42,8 @@ func runSetup(cmd *cobra.Command, _ []string) error {
 		Out:      cmd.OutOrStdout(),
 	}
 
-	fmt.Fprintln(ctx.Out, "jotter setup")
-	fmt.Fprintln(ctx.Out, "")
+	_, _ = fmt.Fprintln(ctx.Out, "jotter setup")
+	_, _ = fmt.Fprintln(ctx.Out, "")
 	return setup.Run(ctx, setup.DefaultSteps())
 }
 

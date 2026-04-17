@@ -107,18 +107,18 @@ func Run(ctx *Context, steps []Step) error {
 		switch state {
 		case AlreadyDone:
 			results = append(results, stepOutcome{name: s.Name(), result: Result{Status: StatusSkipped, Message: "already done"}})
-			fmt.Fprintf(ctx.Out, "  ↷ %s — already done\n", s.Name())
+			_, _ = fmt.Fprintf(ctx.Out, "  ↷ %s — already done\n", s.Name())
 			continue
 		case NotApplicable:
 			results = append(results, stepOutcome{name: s.Name(), result: Result{Status: StatusSkipped, Message: "not applicable"}})
-			fmt.Fprintf(ctx.Out, "  ↷ %s — not applicable\n", s.Name())
+			_, _ = fmt.Fprintf(ctx.Out, "  ↷ %s — not applicable\n", s.Name())
 			continue
 		}
 
 		r, err := s.Run(ctx)
 		if err != nil {
 			results = append(results, stepOutcome{name: s.Name(), result: Result{Status: StatusFailed, Message: err.Error()}})
-			fmt.Fprintf(ctx.Out, "  ✗ %s — %s\n", s.Name(), err)
+			_, _ = fmt.Fprintf(ctx.Out, "  ✗ %s — %s\n", s.Name(), err)
 			printSummary(ctx.Out, results)
 			return fmt.Errorf("step %q failed: %w", s.Name(), err)
 		}
@@ -127,7 +127,7 @@ func Run(ctx *Context, steps []Step) error {
 		}
 		results = append(results, stepOutcome{name: s.Name(), result: r})
 		symbol := symbolFor(r.Status)
-		fmt.Fprintf(ctx.Out, "  %s %s — %s\n", symbol, s.Name(), r.Message)
+		_, _ = fmt.Fprintf(ctx.Out, "  %s %s — %s\n", symbol, s.Name(), r.Message)
 	}
 
 	printSummary(ctx.Out, results)
@@ -155,9 +155,9 @@ func symbolFor(s Status) string {
 }
 
 func printSummary(w io.Writer, outcomes []stepOutcome) {
-	fmt.Fprintln(w, "")
-	fmt.Fprintln(w, "Summary:")
+	_, _ = fmt.Fprintln(w, "")
+	_, _ = fmt.Fprintln(w, "Summary:")
 	for _, o := range outcomes {
-		fmt.Fprintf(w, "  %s %s — %s\n", symbolFor(o.result.Status), o.name, o.result.Message)
+		_, _ = fmt.Fprintf(w, "  %s %s — %s\n", symbolFor(o.result.Status), o.name, o.result.Message)
 	}
 }
