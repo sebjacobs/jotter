@@ -4,21 +4,7 @@ Living document — Now / Next / Later priorities for jotter.
 
 ## Now
 
-### Release infrastructure — prebuilt binaries + CHANGELOG (target: v0.1.0)
-
-Prebuilt per-platform binaries via GoReleaser, semver tags, `CHANGELOG.md` in Keep-a-Changelog format, and a one-line install script. Delivers value on its own: anyone can `curl … | sh` and get a working `jotter` without a Go toolchain — even before `jotter setup` exists.
-
-**Why this first:** the closed plugin PR (#1) tried to solve distribution by coupling it to Claude Code's marketplace. That locked jotter into one agent and still required Go on the user's machine. Prebuilt binaries + a plain install script solve distribution cleanly and don't commit us to any single agent. Ships as **v0.1.0**.
-
-See `docs/specs/release-infra/`.
-
-### `jotter setup` wizard (target: v0.2.0)
-
-Go subcommand that takes a user from binary-on-disk to working `/start` in one flow: detects Claude Code, prompts for data dir, inits the repo, writes `.jotter`, installs embedded skills, merges `Bash(jotter:*)` permission, runs a smoke test.
-
-**Scope:** Claude Code only for v1. Other agents (Codex, Aider, Cursor) are deferred — structure the code so they slot in later without rewrites. Depends on release-infra landing first so the wizard can ship as a proper v0.2.0 release.
-
-See `docs/specs/setup-wizard/` (draft spec lives on `feature/setup-wizard` branch, will rebase after release-infra merges).
+_Nothing in flight._
 
 ## Next
 
@@ -33,6 +19,14 @@ Entries are append-only today — no way to mark one as superseded or retract a 
 **Open questions:** hash scheme (content hash vs ULID?), whether `replaces` is a single hash or a list, how `jotter write --replace <hash>` surfaces in the CLI, how skills like `/save` and `/finish` trigger it.
 
 Worth a short spec doc in `docs/specs/tombstone-delete/` before implementing.
+
+### `jotter setup --update-skills` (triggered when we actually update a skill)
+
+Today `jotter setup` does byte-compare of installed skills against the embedded version and overwrites silently on mismatch. That works technically but has two gaps: (1) users have no signal that re-running setup is needed after a binary upgrade, and (2) any local customisations to a skill get clobbered without warning.
+
+**Target shape:** a skills-only subcommand — `jotter setup --update-skills` — that users run deliberately when upgrading. Prompts before overwriting any skill whose installed bytes differ from both the new embedded version AND the originally-installed version (indicating user customisation).
+
+**Deferred until needed:** not worth building until we actually ship a skill update. When that happens, this is the design to reach for. Likely paired with a `.jotter-skills-state.json` file recording per-file hashes of what was originally installed, for three-way-merge customisation detection.
 
 ## Later
 
@@ -59,9 +53,12 @@ Today jotter writes JSONL files directly and commits them to a git-backed data d
 
 Generalise `jotter setup` beyond Claude Code to Codex, Aider, Cursor. Detect which agents are installed, offer to wire each one up with the equivalent of skills/permissions for that agent. Structured as a plugin per agent so adding a new one is additive.
 
-**Prerequisite:** setup wizard v1 (Claude Code only) ships first and proves the flow works end-to-end. Don't generalise a flow that hasn't been stabilised.
+**Prerequisite:** setup wizard v0.2.0 (Claude Code only) ships first and proves the flow works end-to-end. Don't generalise a flow that hasn't been stabilised.
 
 ## Shipped
 
+- **`jotter setup` interactive wizard** (v0.2.0, merged b880730) — seven-step wizard for Claude Code onboarding; embedded session-management skills via `//go:embed`; idempotent, always-prompt-with-current-values, accept-default is a genuine no-op.
+- **`install.sh` one-line installer** (PR #8, merged 0893688) — detects OS/arch, fetches latest release, SHA-256 verifies, installs to `$HOME/.local/bin`; README rewritten to lead with it.
+- **Release infrastructure + v0.1.0** (PR #7, merged 6443caf; v0.1.0 at 43d8511) — GoReleaser, CHANGELOG, CONTRIBUTING, version stamping, GitHub Actions release workflow on `v*` tag push.
 - **Per-repo data dir via `.jotter` file** (merged 83e8d41) — TOML walk-up resolution replaces `JOTTER_DATA` env + `~/.config/jotter/config`. `jotter config` subcommand prints resolved data dir.
 - **ASCII banner** (PR #6, merged 2b01e04) — braille otter render + figlet wordmark embedded via `//go:embed` on the root command.
