@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
@@ -42,6 +43,8 @@ func runSetup(cmd *cobra.Command, _ []string) error {
 		Out:      cmd.OutOrStdout(),
 	}
 
+	_, _ = fmt.Fprintln(ctx.Out, strings.TrimRight(banner, "\n"))
+	_, _ = fmt.Fprintln(ctx.Out, "")
 	_, _ = fmt.Fprintln(ctx.Out, "jotter setup")
 	_, _ = fmt.Fprintln(ctx.Out, "")
 	return setup.Run(ctx, setup.DefaultSteps())
