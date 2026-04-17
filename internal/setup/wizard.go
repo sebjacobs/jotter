@@ -56,11 +56,21 @@ type Step interface {
 // (home dir, embedded skills, prompter) plus mutable state accumulated as
 // the wizard progresses (user answers).
 type Context struct {
-	Home     string   // user home dir — injectable for tests via t.Setenv
-	SkillsFS embed.FS // embedded skills tree, rooted at "skills/"
-	Prompter Prompter // prompt abstraction; tests inject canned answers
-	Answers  *Answers // accumulated user input across steps
-	Out      io.Writer
+	Home       string   // user home dir — injectable for tests via t.Setenv
+	SkillsFS   embed.FS // embedded skills tree
+	SkillsRoot string   // root inside SkillsFS (default "skills"; tests may override)
+	Prompter   Prompter // prompt abstraction; tests inject canned answers
+	Answers    *Answers // accumulated user input across steps
+	Out        io.Writer
+}
+
+// skillsRoot returns the embed-tree root path for skills, defaulting to
+// "skills" when Context.SkillsRoot is unset.
+func (c *Context) skillsRoot() string {
+	if c.SkillsRoot == "" {
+		return "skills"
+	}
+	return c.SkillsRoot
 }
 
 // Answers accumulates user input during the wizard so later steps can read
