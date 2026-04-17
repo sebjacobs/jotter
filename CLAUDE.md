@@ -5,7 +5,7 @@ Append-only session log tool for Claude Code sessions. Go rewrite of the Python 
 ## Build & test
 
 ```bash
-go build -o jotter .        # build binary
+go build -o bin/jotter .     # build binary (always output to bin/, not repo root)
 go test ./...                # run all tests (52 tests)
 go test ./cmd/               # command-level integration tests
 go test ./internal/           # unit tests for config, entry, storage
