@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.2.2] — 2026-04-17
+
+### Fixed
+- CI lint job is green again. `fmt.Fprintln`/`Fprintf` calls in `cmd/setup.go` and `internal/setup/wizard.go` now explicitly discard their return values, clearing `errcheck` failures that had been red since the v0.2.0 setup-wizard merge.
+
+### Added
+- `justfile` with `build`, `test`, `lint`, `check`, `release-snapshot`, and `clean` recipes. `just check` runs build + test + lint in one go, mirroring exactly what CI runs. `README.md` and `CLAUDE.md` now point at it as the canonical pre-push command.
+
 ## [v0.2.1] — 2026-04-17
 
 ### Fixed
@@ -30,7 +38,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.2.2...HEAD
+[v0.2.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.2.2
 [v0.2.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.2.1
 [v0.2.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.2.0
 [v0.1.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.1.0
