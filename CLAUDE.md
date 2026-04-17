@@ -34,7 +34,7 @@ internal/
 
 - JSONL uses Python `json.dumps` spacing (`, ` and `: ` separators) for data repo compatibility
 - Branch names sanitised: `/` replaced with `+` in filenames
-- Entry types: `start`, `checkpoint`, `break`, `finish`
+- Entry types: `start`, `checkpoint`, `note`, `break`, `finish`
 - Git commit message format: `session: {project}/{branch} {type} {timestamp}`
 - `finish` entries trigger git push (non-fatal on failure)
 - Exit code 1 for user-facing errors (missing files, no results, invalid input)
