@@ -46,7 +46,10 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	logsDir := filepath.Join(dataDir, "logs")
-	paths := internal.CollectPaths(dataDir, project, branch)
+	paths, err := internal.CollectPaths(dataDir, project, branch)
+	if err != nil {
+		return err
+	}
 	if len(paths) == 0 {
 		fmt.Fprintln(os.Stderr, "No matching log files found")
 		os.Exit(1)

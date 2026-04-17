@@ -48,7 +48,10 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := internal.JSONLPath(dataDir, project, branch)
+	path, err := internal.JSONLPath(dataDir, project, branch)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("creating directories: %w", err)
 	}
