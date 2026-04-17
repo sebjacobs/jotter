@@ -26,6 +26,9 @@ func init() {
 	_ = writeCmd.MarkFlagRequired("branch")
 	_ = writeCmd.MarkFlagRequired("type")
 	_ = writeCmd.MarkFlagRequired("content")
+	_ = writeCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = writeCmd.RegisterFlagCompletionFunc("branch", completeBranches)
+	_ = writeCmd.RegisterFlagCompletionFunc("type", completeTypes)
 	rootCmd.AddCommand(writeCmd)
 }
 

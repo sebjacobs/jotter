@@ -21,6 +21,8 @@ func init() {
 	tailCmd.Flags().Int("limit", 1, "Number of entries to return")
 	_ = tailCmd.MarkFlagRequired("project")
 	_ = tailCmd.MarkFlagRequired("branch")
+	_ = tailCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = tailCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(tailCmd)
 }
 

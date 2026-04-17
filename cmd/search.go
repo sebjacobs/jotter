@@ -23,6 +23,9 @@ func init() {
 	searchCmd.Flags().String("branch", "", "Scope to this branch")
 	searchCmd.Flags().String("since", "", "Filter entries from this date (YYYY-MM-DD)")
 	searchCmd.Flags().String("type", "", "Filter by entry type")
+	_ = searchCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = searchCmd.RegisterFlagCompletionFunc("branch", completeBranches)
+	_ = searchCmd.RegisterFlagCompletionFunc("type", completeTypes)
 	rootCmd.AddCommand(searchCmd)
 }
 

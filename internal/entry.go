@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 )
@@ -17,17 +18,12 @@ type Entry struct {
 	Next      string `json:"next,omitempty"`
 }
 
-var validEntryTypes = map[string]bool{
-	"start":      true,
-	"checkpoint": true,
-	"note":       true,
-	"break":      true,
-	"finish":     true,
-}
+// ValidEntryTypes lists all allowed entry types, in canonical order.
+var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "finish"}
 
 // IsValidEntryType checks whether a type string is one of the allowed entry types.
 func IsValidEntryType(t string) bool {
-	return validEntryTypes[t]
+	return slices.Contains(ValidEntryTypes, t)
 }
 
 // ReadEntries reads all entries from a JSONL file.
