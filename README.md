@@ -26,6 +26,18 @@ go install github.com/sebjacobs/jotter@latest
 
 Binaries built this way report `jotter dev` for `--version`; release tags only land in binaries from the prebuilt flow above.
 
+## Setup
+
+Once `jotter` is on your PATH, the fastest way to wire it into Claude Code is the interactive setup wizard:
+
+```bash
+jotter setup
+```
+
+It takes you through seven steps in one go — detects Claude Code, prompts for a data directory (default `~/session-logs-data`), initialises it as a git repo, optionally wires a git remote, writes your `~/.jotter` config, installs the session-management skills (`/start`, `/save`, `/finish`, `/break`, `/recover`), grants the `Bash(jotter:*)` permission in `~/.claude/settings.json`, and runs a write-and-read-back smoke test. Re-running is idempotent — it detects existing state and only updates what's changed.
+
+If you'd rather wire things up by hand, the `Configuration` section below describes the same artefacts the wizard produces.
+
 ## Configuration
 
 Jotter is configured via a `.jotter` TOML file. Drop one in your home directory for a global default, and optionally one at the root of any project that should use a different data dir:
