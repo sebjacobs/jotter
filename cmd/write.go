@@ -19,7 +19,7 @@ var writeCmd = &cobra.Command{
 func init() {
 	writeCmd.Flags().String("project", "", "Project name (required)")
 	writeCmd.Flags().String("branch", "", "Branch name (required)")
-	writeCmd.Flags().String("type", "", "Entry type: start, checkpoint, break, finish (required)")
+	writeCmd.Flags().String("type", "", "Entry type: start, checkpoint, note, break, finish (required)")
 	writeCmd.Flags().String("content", "", "Entry content (required)")
 	writeCmd.Flags().String("next", "", "Next task description")
 	_ = writeCmd.MarkFlagRequired("project")
@@ -37,7 +37,7 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	next, _ := cmd.Flags().GetString("next")
 
 	if !internal.IsValidEntryType(entryType) {
-		return fmt.Errorf("invalid entry type %q: must be one of start, checkpoint, break, finish", entryType)
+		return fmt.Errorf("invalid entry type %q: must be one of start, checkpoint, note, break, finish", entryType)
 	}
 
 	dataDir, err := internal.GetDataDir()

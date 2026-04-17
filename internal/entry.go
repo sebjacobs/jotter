@@ -20,6 +20,7 @@ type Entry struct {
 var validEntryTypes = map[string]bool{
 	"start":      true,
 	"checkpoint": true,
+	"note":       true,
 	"break":      true,
 	"finish":     true,
 }

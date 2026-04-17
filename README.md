@@ -40,7 +40,7 @@ jotter write --project myapp --branch feature/auth --type start --content "Worki
 jotter write --project myapp --branch feature/auth --type finish --content "OAuth complete" --next "Add refresh token support"
 ```
 
-Entry types: `start`, `checkpoint`, `break`, `finish`.
+Entry types: `start`, `checkpoint`, `note`, `break`, `finish`.
 
 The `--next` flag records what to pick up next session. Finish entries also trigger a git push.
 
