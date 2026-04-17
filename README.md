@@ -29,6 +29,18 @@ echo ~/path/to/session-logs-data > ~/.config/jotter/config
 
 The data directory must be a git repository. Jotter auto-commits every entry and pushes on session finish.
 
+## Shell completion
+
+Jotter offers context-aware completion for the `--project`, `--branch`, and `--type` flags — it reads your actual log store, so tab-completing `--branch` shows only branches that exist for the selected `--project` (sanitised `+` reversed back to `/`).
+
+```bash
+jotter completion zsh > /path/to/completions/_jotter    # zsh
+jotter completion bash > /etc/bash_completion.d/jotter  # bash
+jotter completion fish > ~/.config/fish/completions/jotter.fish
+```
+
+For zsh, the completions directory must be on `$fpath` before `compinit` runs. If you manage dotfiles, drop `_jotter` into a tracked `completions/` dir and prepend it to `fpath` in your `.zshrc`.
+
 ## Usage
 
 ### write
