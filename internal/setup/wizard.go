@@ -62,6 +62,11 @@ type Context struct {
 	Prompter   Prompter // prompt abstraction; tests inject canned answers
 	Answers    *Answers // accumulated user input across steps
 	Out        io.Writer
+
+	// Changed is set to true by the runner when any step returns StatusUpdated.
+	// Later steps (remote, smoke) check it so that re-running the wizard on a
+	// healthy install is a no-op — no prompts, no file writes, no git commits.
+	Changed bool
 }
 
 // skillsRoot returns the embed-tree root path for skills, defaulting to
@@ -116,6 +121,9 @@ func Run(ctx *Context, steps []Step) error {
 			fmt.Fprintf(ctx.Out, "  ✗ %s — %s\n", s.Name(), err)
 			printSummary(ctx.Out, results)
 			return fmt.Errorf("step %q failed: %w", s.Name(), err)
+		}
+		if r.Status == StatusUpdated {
+			ctx.Changed = true
 		}
 		results = append(results, stepOutcome{name: s.Name(), result: r})
 		symbol := symbolFor(r.Status)

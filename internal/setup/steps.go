@@ -132,7 +132,25 @@ type remoteStep struct{}
 
 func (remoteStep) Name() string { return "git remote" }
 
-func (remoteStep) Detect(_ *Context) (State, error) { return NeedsRun, nil }
+// Detect skips the remote step entirely when nothing has changed in the data
+// dir step AND an origin remote is already configured. Re-running setup on a
+// healthy install should not re-prompt or re-stamp the remote.
+func (remoteStep) Detect(ctx *Context) (State, error) {
+	if ctx.Changed {
+		return NeedsRun, nil
+	}
+	if ctx.Answers.DataDir == "" {
+		return NeedsRun, nil
+	}
+	out, err := exec.Command("git", "-C", ctx.Answers.DataDir, "remote", "get-url", "origin").Output()
+	if err != nil {
+		// No origin configured — step still needs to run to ask whether the
+		// user wants to wire one up.
+		return NeedsRun, nil
+	}
+	ctx.Answers.RemoteURL = strings.TrimSpace(string(out))
+	return AlreadyDone, nil
+}
 
 func (remoteStep) Run(ctx *Context) (Result, error) {
 	path := ctx.Answers.DataDir
@@ -149,16 +167,20 @@ func (remoteStep) Run(ctx *Context) (Result, error) {
 		return Result{Status: StatusSkipped, Message: "no remote configured (finish entries will not push)"}, nil
 	}
 
-	if existingURL == "" {
+	switch {
+	case existingURL == "":
 		if err := runGit(path, "remote", "add", "origin", url); err != nil {
 			return Result{}, fmt.Errorf("adding remote: %w", err)
 		}
-	} else if existingURL != url {
+		return Result{Status: StatusUpdated, Message: fmt.Sprintf("remote origin set to %s", url)}, nil
+	case existingURL != url:
 		if err := runGit(path, "remote", "set-url", "origin", url); err != nil {
 			return Result{}, fmt.Errorf("updating remote: %w", err)
 		}
+		return Result{Status: StatusUpdated, Message: fmt.Sprintf("remote origin updated to %s", url)}, nil
+	default:
+		return Result{Status: StatusOK, Message: fmt.Sprintf("remote origin already set to %s", url)}, nil
 	}
-	return Result{Status: StatusUpdated, Message: fmt.Sprintf("remote origin set to %s", url)}, nil
 }
 
 // --- step 4: .jotter config ---
@@ -284,7 +306,15 @@ type smokeStep struct{}
 
 func (smokeStep) Name() string { return "smoke test" }
 
-func (smokeStep) Detect(_ *Context) (State, error) { return NeedsRun, nil }
+// Detect skips the smoke test if no prior step made a change. Writing (and
+// then cleaning up) an entry in the data repo produces two commits every
+// time — tolerable on a fresh install, but cruft on a no-op re-run.
+func (smokeStep) Detect(ctx *Context) (State, error) {
+	if !ctx.Changed {
+		return AlreadyDone, nil
+	}
+	return NeedsRun, nil
+}
 
 func (smokeStep) Run(ctx *Context) (Result, error) {
 	// Invoke the jotter binary itself rather than calling internal packages
