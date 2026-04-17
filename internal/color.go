@@ -14,6 +14,7 @@ var typeColors = map[string]*color.Color{
 	"finish":     color.New(color.FgBlue),
 	"break":      color.New(color.FgYellow),
 	"checkpoint": color.New(color.FgCyan),
+	"note":       color.New(color.FgMagenta),
 }
 
 // ColorType returns the entry type string in its assigned color.
