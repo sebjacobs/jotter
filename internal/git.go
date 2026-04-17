@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bytes"
 	"fmt"
 	"os/exec"
 )
@@ -22,6 +23,17 @@ func GitPush(dataDir string) error {
 		return fmt.Errorf("git push: %w", err)
 	}
 	return nil
+}
+
+// GitHasRemote reports whether the data repo has any remote configured.
+func GitHasRemote(dataDir string) bool {
+	cmd := exec.Command("git", "remote")
+	cmd.Dir = dataDir
+	out, err := cmd.Output()
+	if err != nil {
+		return false
+	}
+	return len(bytes.TrimSpace(out)) > 0
 }
 
 func run(dir string, name string, args ...string) error {
