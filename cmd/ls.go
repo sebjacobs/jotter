@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -82,8 +82,8 @@ func lsBranches(logsDir, project string) error {
 		branches = append(branches, bi)
 	}
 
-	sort.Slice(branches, func(i, j int) bool {
-		return branches[i].lastTS > branches[j].lastTS
+	slices.SortFunc(branches, func(a, b branchInfo) int {
+		return strings.Compare(b.lastTS, a.lastTS)
 	})
 
 	for _, b := range branches {
@@ -129,8 +129,8 @@ func lsProjects(logsDir string) error {
 		os.Exit(1)
 	}
 
-	sort.Slice(projects, func(i, j int) bool {
-		return projects[i].lastTS > projects[j].lastTS
+	slices.SortFunc(projects, func(a, b projectInfo) int {
+		return strings.Compare(b.lastTS, a.lastTS)
 	})
 
 	for _, p := range projects {
