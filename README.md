@@ -9,8 +9,22 @@ Append-only session log tool for [Claude Code](https://docs.anthropic.com/en/doc
 ## Install
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/sebjacobs/jotter/main/install.sh | sh
+```
+
+Downloads the latest prebuilt binary for your platform (macOS arm64/amd64, Linux arm64/amd64), verifies its SHA-256 checksum, and installs it to `$HOME/.local/bin`. Override the target directory with `JOTTER_INSTALL_DIR=/path/to/bin`, or pin a version with `JOTTER_VERSION=v0.1.0`.
+
+If `$HOME/.local/bin` isn't already on your `PATH`, the script prints the `export` line you need.
+
+### Alternative: `go install`
+
+If you have a Go toolchain and prefer source builds (or you're on an unsupported platform like Windows):
+
+```bash
 go install github.com/sebjacobs/jotter@latest
 ```
+
+Binaries built this way report `jotter dev` for `--version`; release tags only land in binaries from the prebuilt flow above.
 
 ## Configuration
 
