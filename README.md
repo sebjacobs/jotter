@@ -143,6 +143,21 @@ Each line is a JSON object:
 
 JSON uses Python-compatible spacing (`, ` and `: ` separators) for compatibility with the original Python implementation.
 
+## Development
+
+Clone the repo and build from source:
+
+```bash
+git clone https://github.com/sebjacobs/jotter.git
+cd jotter
+go build -o bin/jotter .     # binary goes to bin/, not the repo root
+go test ./...                # run the full suite
+```
+
+Architecture breakdown — what lives where (skills, commands, internal packages) — is documented in [`CLAUDE.md`](CLAUDE.md). Release process (cutting a tagged release, bumping the changelog) is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+Local builds report `jotter dev` for `--version`; real version info (semver tag, commit SHA, build date) is stamped in via `-ldflags` only on GoReleaser builds from tag pushes.
+
 ## License
 
 MIT
