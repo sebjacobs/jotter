@@ -36,7 +36,10 @@ func runTail(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	path := internal.JSONLPath(dataDir, project, branch)
+	path, err := internal.JSONLPath(dataDir, project, branch)
+	if err != nil {
+		return err
+	}
 	entries, err := internal.ReadEntries(path)
 	if err != nil {
 		return err
