@@ -13,9 +13,14 @@ import (
 var banner string
 
 var rootCmd = &cobra.Command{
-	Use:   "jotter",
-	Short: "Append-only session log tool for Claude Code sessions",
-	Long:  strings.TrimRight(banner, "\n") + "\n\nAppend-only session log tool for Claude Code sessions.",
+	Use:     "jotter",
+	Short:   "Append-only session log tool for Claude Code sessions",
+	Long:    strings.TrimRight(banner, "\n") + "\n\nAppend-only session log tool for Claude Code sessions.",
+	Version: versionString(),
+}
+
+func init() {
+	rootCmd.SetVersionTemplate("{{.Version}}\n")
 }
 
 func Execute() {

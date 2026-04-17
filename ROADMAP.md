@@ -4,27 +4,35 @@ Living document — Now / Next / Later priorities for jotter.
 
 ## Now
 
-_Nothing in flight._
+### Release infrastructure — prebuilt binaries + CHANGELOG (target: v0.1.0)
+
+Prebuilt per-platform binaries via GoReleaser, semver tags, `CHANGELOG.md` in Keep-a-Changelog format, and a one-line install script. Delivers value on its own: anyone can `curl … | sh` and get a working `jotter` without a Go toolchain — even before `jotter setup` exists.
+
+**Why this first:** the closed plugin PR (#1) tried to solve distribution by coupling it to Claude Code's marketplace. That locked jotter into one agent and still required Go on the user's machine. Prebuilt binaries + a plain install script solve distribution cleanly and don't commit us to any single agent. Ships as **v0.1.0**.
+
+See `docs/specs/release-infra/`.
+
+### `jotter setup` wizard (target: v0.2.0)
+
+Go subcommand that takes a user from binary-on-disk to working `/start` in one flow: detects Claude Code, prompts for data dir, inits the repo, writes `.jotter`, installs embedded skills, merges `Bash(jotter:*)` permission, runs a smoke test.
+
+**Scope:** Claude Code only for v1. Other agents (Codex, Aider, Cursor) are deferred — structure the code so they slot in later without rewrites. Depends on release-infra landing first so the wizard can ship as a proper v0.2.0 release.
+
+See `docs/specs/setup-wizard/` (draft spec lives on `feature/setup-wizard` branch, will rebase after release-infra merges).
 
 ## Next
 
-### Per-repo data dir via `.jotter` file
+### Tombstone / soft-delete for entries
 
-Today the data dir is resolved globally (`JOTTER_DATA` env → `~/.config/jotter/config`). That's wrong for users with a mix of private and public projects — personal notes on a private codebase shouldn't land in the same data repo as notes on a public one.
+Entries are append-only today — no way to mark one as superseded or retract a mistake without rewriting history in the data repo (which breaks the append-only guarantee and any git-based replication).
 
-**Target behaviour:** jotter walks up from cwd looking for a `.jotter` file. First one wins. A top-level `~/.jotter` is the natural global fallback — same format, same walk, the point where the walk terminates when nothing closer is found. No env var, no XDG config dir, no separate resolution mechanism: one file, one rule.
+**Target shape:** a git-style chain-of-hashes approach. Each entry gets a stable hash; a later entry can carry a `replaces: <hash>` field to mark the earlier one as superseded. Readers (`tail`, `search`) filter out replaced entries by default, with a flag to surface them.
 
-**File format:** TOML, even in v1:
+**Why this shape:** preserves append-only semantics (nothing is ever mutated or deleted from the JSONL), survives rebase/cherry-pick in the data repo, and is trivially inspectable — the full history is still there, just annotated.
 
-```toml
-data_dir = "~/session-logs-private"
-```
+**Open questions:** hash scheme (content hash vs ULID?), whether `replaces` is a single hash or a list, how `jotter write --replace <hash>` surfaces in the CLI, how skills like `/save` and `/finish` trigger it.
 
-The single-key TOML looks silly today but costs nothing and leaves room for a future `backend = "sqlite"` key when pluggable storage lands. A bare-string format would need a breaking change.
-
-**Also needed:** `jotter config` (or `jotter info`) subcommand that prints the resolved data dir for the current cwd, so users can sanity-check which store they're about to write to before running `write`. Without it, "why did this entry land in the wrong place?" becomes a debugging mystery.
-
-**Migration:** no external users yet, so replace `JOTTER_DATA` env and `~/.config/jotter/config` outright — no legacy fallback. Ship a one-liner in the README explaining how to move an existing config.
+Worth a short spec doc in `docs/specs/tombstone-delete/` before implementing.
 
 ## Later
 
@@ -46,3 +54,14 @@ Today jotter writes JSONL files directly and commits them to a git-backed data d
 2. Move `internal.GitCommit` / `GitPush` calls out of `cmd/write.go` and into the storage layer. Any non-local backend will not want per-write git commits, and this coupling will leak through any extracted interface if left alone.
 
 **When to actually do it:** only once a concrete second backend is committed to. Extracting an interface with one implementation tends to encode the current impl's shape (per-write git commits, branch-name sanitisation as a filename concern) rather than a genuinely portable contract.
+
+### Multi-agent support
+
+Generalise `jotter setup` beyond Claude Code to Codex, Aider, Cursor. Detect which agents are installed, offer to wire each one up with the equivalent of skills/permissions for that agent. Structured as a plugin per agent so adding a new one is additive.
+
+**Prerequisite:** setup wizard v1 (Claude Code only) ships first and proves the flow works end-to-end. Don't generalise a flow that hasn't been stabilised.
+
+## Shipped
+
+- **Per-repo data dir via `.jotter` file** (merged 83e8d41) — TOML walk-up resolution replaces `JOTTER_DATA` env + `~/.config/jotter/config`. `jotter config` subcommand prints resolved data dir.
+- **ASCII banner** (PR #6, merged 2b01e04) — braille otter render + figlet wordmark embedded via `//go:embed` on the root command.
