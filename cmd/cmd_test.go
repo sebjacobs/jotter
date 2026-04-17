@@ -61,11 +61,22 @@ func initDataDir(t *testing.T) string {
 	return dir
 }
 
-// runJotter runs the jotter binary with args and JOTTER_DATA set.
+// runJotter runs the jotter binary from a fresh working directory with a
+// .jotter file pointing at dataDir. HOME is redirected to a clean sandbox so
+// the real user's ~/.jotter (if any) cannot leak in.
 func runJotter(t *testing.T, dataDir string, args ...string) (string, string, int) {
 	t.Helper()
+	workdir := t.TempDir()
+	configPath := filepath.Join(workdir, ".jotter")
+	body := fmt.Sprintf("data_dir = %q\n", dataDir)
+	if err := os.WriteFile(configPath, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cleanHome := t.TempDir()
+
 	cmd := exec.Command(binaryPath, args...)
-	cmd.Env = append(os.Environ(), "JOTTER_DATA="+dataDir)
+	cmd.Dir = workdir
+	cmd.Env = append(os.Environ(), "HOME="+cleanHome)
 	var stdout, stderr strings.Builder
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
