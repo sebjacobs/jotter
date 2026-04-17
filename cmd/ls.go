@@ -20,6 +20,7 @@ var lsCmd = &cobra.Command{
 
 func init() {
 	lsCmd.Flags().String("project", "", "List branches for this project")
+	_ = lsCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	rootCmd.AddCommand(lsCmd)
 }
 
@@ -87,9 +88,9 @@ func lsBranches(logsDir, project string) error {
 
 	for _, b := range branches {
 		if b.lastDate != "" {
-			fmt.Printf("%s  (%d entries, last: %s)\n", b.name, b.count, b.lastDate)
+			fmt.Printf("%s  %s\n", internal.Bold(b.name), internal.Dim(fmt.Sprintf("(%d entries, last: %s)", b.count, b.lastDate)))
 		} else {
-			fmt.Println(b.name)
+			fmt.Println(internal.Bold(b.name))
 		}
 	}
 	return nil
@@ -134,9 +135,9 @@ func lsProjects(logsDir string) error {
 
 	for _, p := range projects {
 		if p.lastDate != "" {
-			fmt.Printf("%s  (last: %s)\n", p.name, p.lastDate)
+			fmt.Printf("%s  %s\n", internal.Bold(p.name), internal.Dim(fmt.Sprintf("(last: %s)", p.lastDate)))
 		} else {
-			fmt.Println(p.name)
+			fmt.Println(internal.Bold(p.name))
 		}
 	}
 	return nil

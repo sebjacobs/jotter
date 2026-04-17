@@ -91,6 +91,6 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("Wrote %s entry to %s\n", entryType, rel)
+	fmt.Printf("Wrote %s entry to %s\n", internal.ColorType(entryType), internal.Dim(rel))
 	return nil
 }

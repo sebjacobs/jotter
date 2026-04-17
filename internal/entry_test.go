@@ -111,7 +111,7 @@ func TestFormatEntry_Basic(t *testing.T) {
 	if !strings.Contains(out, "Hello world") {
 		t.Errorf("content not found in:\n%s", out)
 	}
-	if strings.Contains(out, "**Next:**") {
+	if strings.Contains(out, "Next:") {
 		t.Error("should not contain Next when empty")
 	}
 }
@@ -124,7 +124,7 @@ func TestFormatEntry_WithNext(t *testing.T) {
 		Next:      "Pick up testing",
 	}
 	out := FormatEntry(e)
-	if !strings.Contains(out, "**Next:** Pick up testing") {
+	if !strings.Contains(out, "Next: Pick up testing") {
 		t.Errorf("next line not found in:\n%s", out)
 	}
 }

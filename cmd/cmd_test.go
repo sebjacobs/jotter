@@ -284,7 +284,7 @@ func TestTail_RendersNextField(t *testing.T) {
 		"--next", "Continue tomorrow")
 	stdout, _, _ := runJotter(t, dir,
 		"tail", "--project", "proj", "--branch", "main")
-	if !strings.Contains(stdout, "**Next:** Continue tomorrow") {
+	if !strings.Contains(stdout, "Next: Continue tomorrow") {
 		t.Errorf("missing next field: %s", stdout)
 	}
 }
