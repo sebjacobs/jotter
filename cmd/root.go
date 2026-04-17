@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	_ "embed"
+	"embed"
 	"fmt"
 	"os"
 	"strings"
@@ -11,6 +11,9 @@ import (
 
 //go:embed banner.txt
 var banner string
+
+// skillsFS holds the embedded skills tree, passed in from main.
+var skillsFS embed.FS
 
 var rootCmd = &cobra.Command{
 	Use:     "jotter",
@@ -23,7 +26,8 @@ func init() {
 	rootCmd.SetVersionTemplate("{{.Version}}\n")
 }
 
-func Execute() {
+func Execute(fs embed.FS) {
+	skillsFS = fs
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

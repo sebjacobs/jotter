@@ -1,7 +1,14 @@
 package main
 
-import "github.com/sebjacobs/jotter/cmd"
+import (
+	"embed"
+
+	"github.com/sebjacobs/jotter/cmd"
+)
+
+//go:embed all:skills
+var skillsFS embed.FS
 
 func main() {
-	cmd.Execute()
+	cmd.Execute(skillsFS)
 }
