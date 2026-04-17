@@ -177,6 +177,19 @@ func TestWrite_NextFieldAbsent(t *testing.T) {
 	}
 }
 
+func TestWrite_FinishWithoutRemote_SkipsPushSilently(t *testing.T) {
+	dir := initDataDir(t)
+	stdout, stderr, code := runJotter(t, dir,
+		"write", "--project", "proj", "--branch", "main",
+		"--type", "finish", "--content", "Done")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s stderr: %s", code, stdout, stderr)
+	}
+	if strings.Contains(stderr, "git push failed") {
+		t.Errorf("expected no push-failure warning when no remote configured, got stderr: %s", stderr)
+	}
+}
+
 func TestWrite_AppendsToExistingFile(t *testing.T) {
 	dir := initDataDir(t)
 	for i := range 3 {
