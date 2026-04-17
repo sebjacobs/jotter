@@ -2,9 +2,12 @@ package cmd
 
 import (
 	"fmt"
-	"io/fs"
+	"os"
 
+	"github.com/charmbracelet/huh"
 	"github.com/spf13/cobra"
+
+	"github.com/sebjacobs/jotter/internal/setup"
 )
 
 var setupCmd = &cobra.Command{
@@ -26,20 +29,48 @@ func init() {
 }
 
 func runSetup(cmd *cobra.Command, _ []string) error {
-	// Placeholder: prove the skills embed is wired through.
-	// Full wizard implementation lands in subsequent commits.
-	count, err := countEmbeddedSkills()
+	home, err := os.UserHomeDir()
 	if err != nil {
-		return fmt.Errorf("counting embedded skills: %w", err)
+		return fmt.Errorf("locating home directory: %w", err)
 	}
-	fmt.Fprintf(cmd.OutOrStdout(), "jotter setup: wired up (embedded %d skills)\n", count)
-	return nil
+
+	ctx := &setup.Context{
+		Home:     home,
+		SkillsFS: skillsFS,
+		Prompter: &huhPrompter{},
+		Answers:  &setup.Answers{},
+		Out:      cmd.OutOrStdout(),
+	}
+
+	fmt.Fprintln(ctx.Out, "jotter setup")
+	fmt.Fprintln(ctx.Out, "")
+	return setup.Run(ctx, setup.DefaultSteps())
 }
 
-func countEmbeddedSkills() (int, error) {
-	entries, err := fs.ReadDir(skillsFS, "skills")
+// huhPrompter is the production implementation of setup.Prompter, using
+// charmbracelet/huh for actual interactive TUI prompts.
+type huhPrompter struct{}
+
+func (huhPrompter) Input(question, defaultValue string) (string, error) {
+	value := defaultValue
+	err := huh.NewInput().
+		Title(question).
+		Value(&value).
+		Run()
 	if err != nil {
-		return 0, err
+		return "", err
 	}
-	return len(entries), nil
+	return value, nil
+}
+
+func (huhPrompter) Confirm(question string, defaultYes bool) (bool, error) {
+	value := defaultYes
+	err := huh.NewConfirm().
+		Title(question).
+		Value(&value).
+		Run()
+	if err != nil {
+		return false, err
+	}
+	return value, nil
 }
