@@ -25,16 +25,38 @@ func init() {
 }
 
 type branchInfo struct {
-	name     string
-	count    int
-	lastDate string
-	lastTS   string
+	name    string
+	count   int
+	lastRel string
+	lastTS  string
 }
 
 type projectInfo struct {
-	name     string
-	lastDate string
-	lastTS   string
+	name    string
+	lastRel string
+	lastTS  string
+}
+
+func relativeTime(ts string) string {
+	t, err := time.Parse(internal.TimestampFormat, ts)
+	if err != nil {
+		return ts
+	}
+	d := time.Since(t)
+	switch {
+	case d < time.Minute:
+		return "just now"
+	case d < time.Hour:
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	case d < 24*time.Hour:
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	case d < 14*24*time.Hour:
+		return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+	case d < 8*7*24*time.Hour:
+		return fmt.Sprintf("%dw ago", int(d.Hours()/(24*7)))
+	default:
+		return t.Format("2006-01-02 15:04")
+	}
 }
 
 func runLs(cmd *cobra.Command, args []string) error {
@@ -76,8 +98,7 @@ func lsBranches(logsDir, project string) error {
 		if len(entries) > 0 {
 			bi.count = len(entries)
 			bi.lastTS = entries[len(entries)-1].Timestamp
-			t, _ := time.Parse(internal.TimestampFormat, bi.lastTS)
-			bi.lastDate = t.Format(internal.DateFormat)
+			bi.lastRel = relativeTime(bi.lastTS)
 		}
 		branches = append(branches, bi)
 	}
@@ -87,8 +108,8 @@ func lsBranches(logsDir, project string) error {
 	})
 
 	for _, b := range branches {
-		if b.lastDate != "" {
-			fmt.Printf("%s  %s\n", internal.Bold(b.name), internal.Dim(fmt.Sprintf("(%d entries, last: %s)", b.count, b.lastDate)))
+		if b.lastRel != "" {
+			fmt.Printf("%s  %s\n", internal.Bold(b.name), internal.Dim(fmt.Sprintf("(%d entries, last: %s)", b.count, b.lastRel)))
 		} else {
 			fmt.Println(internal.Bold(b.name))
 		}
@@ -117,8 +138,7 @@ func lsProjects(logsDir string) error {
 			ts := logEntries[len(logEntries)-1].Timestamp
 			if ts > pi.lastTS {
 				pi.lastTS = ts
-				t, _ := time.Parse(internal.TimestampFormat, ts)
-				pi.lastDate = t.Format(internal.DateFormat)
+				pi.lastRel = relativeTime(ts)
 			}
 		}
 		projects = append(projects, pi)
@@ -134,8 +154,8 @@ func lsProjects(logsDir string) error {
 	})
 
 	for _, p := range projects {
-		if p.lastDate != "" {
-			fmt.Printf("%s  %s\n", internal.Bold(p.name), internal.Dim(fmt.Sprintf("(last: %s)", p.lastDate)))
+		if p.lastRel != "" {
+			fmt.Printf("%s  %s\n", internal.Bold(p.name), internal.Dim(fmt.Sprintf("(last: %s)", p.lastRel)))
 		} else {
 			fmt.Println(internal.Bold(p.name))
 		}
