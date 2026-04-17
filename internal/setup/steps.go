@@ -53,32 +53,22 @@ type dataDirStep struct{}
 
 func (dataDirStep) Name() string { return "data directory" }
 
-// Detect looks for an existing ~/.jotter. If present and pointing at a valid
-// git repo, the step is already done (and the path is captured into Answers
-// so later steps see it). If ~/.jotter points at a path that's missing or
-// non-git, the step still needs to run but Answers.DataDir is pre-populated
-// so Run prompts with the existing path as the default rather than clobbering
-// the user's choice with the generic ~/session-logs-data default.
+// Detect reads ~/.jotter (if present) and pre-populates Answers.DataDir so
+// Run's prompt shows the existing path as the default. Always returns
+// NeedsRun — the user may legitimately want to change the data dir, and the
+// prompt gives them that opportunity without forcing them to edit ~/.jotter
+// by hand. Accepting the default is a no-op: Run only returns StatusUpdated
+// when the chosen path differs from what was already configured.
 func (dataDirStep) Detect(ctx *Context) (State, error) {
 	configPath := filepath.Join(ctx.Home, ".jotter")
 	if _, err := os.Stat(configPath); err != nil {
-		return NeedsRun, nil // no existing config
+		return NeedsRun, nil
 	}
 	cfg, err := internal.LoadConfig(configPath)
-	if err != nil {
-		// Existing config is malformed — let Run overwrite it (after prompting).
-		return NeedsRun, nil
+	if err == nil {
+		ctx.Answers.DataDir = cfg.DataDir
 	}
-	ctx.Answers.DataDir = cfg.DataDir
-
-	info, err := os.Stat(cfg.DataDir)
-	if err != nil || !info.IsDir() {
-		return NeedsRun, nil
-	}
-	if _, err := os.Stat(filepath.Join(cfg.DataDir, ".git")); err != nil {
-		return NeedsRun, nil
-	}
-	return AlreadyDone, nil
+	return NeedsRun, nil
 }
 
 func (dataDirStep) Run(ctx *Context) (Result, error) {
@@ -132,25 +122,12 @@ type remoteStep struct{}
 
 func (remoteStep) Name() string { return "git remote" }
 
-// Detect skips the remote step entirely when nothing has changed in the data
-// dir step AND an origin remote is already configured. Re-running setup on a
-// healthy install should not re-prompt or re-stamp the remote.
-func (remoteStep) Detect(ctx *Context) (State, error) {
-	if ctx.Changed {
-		return NeedsRun, nil
-	}
-	if ctx.Answers.DataDir == "" {
-		return NeedsRun, nil
-	}
-	out, err := exec.Command("git", "-C", ctx.Answers.DataDir, "remote", "get-url", "origin").Output()
-	if err != nil {
-		// No origin configured — step still needs to run to ask whether the
-		// user wants to wire one up.
-		return NeedsRun, nil
-	}
-	ctx.Answers.RemoteURL = strings.TrimSpace(string(out))
-	return AlreadyDone, nil
-}
+// Detect always returns NeedsRun. Run prompts with the existing remote (if
+// any) as the default — accepting the default is a no-op because Run only
+// returns StatusUpdated when the URL actually changes. This matches the
+// "show current value, let the user edit it" pattern the wizard applies
+// everywhere else.
+func (remoteStep) Detect(_ *Context) (State, error) { return NeedsRun, nil }
 
 func (remoteStep) Run(ctx *Context) (Result, error) {
 	path := ctx.Answers.DataDir

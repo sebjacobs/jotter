@@ -10,7 +10,9 @@ import (
 // TestDataDirStepDetectReadsExistingConfig verifies that Detect pre-populates
 // Answers.DataDir from an existing ~/.jotter so subsequent prompts show the
 // right default rather than clobbering the user's config with the generic
-// ~/session-logs-data default.
+// ~/session-logs-data default. Detect always returns NeedsRun so the user
+// sees the current value and can edit it — accepting the default is a
+// no-op handled by Run.
 func TestDataDirStepDetectReadsExistingConfig(t *testing.T) {
 	ctx := newStepCtx(t, &stubPrompter{})
 
@@ -30,8 +32,8 @@ func TestDataDirStepDetectReadsExistingConfig(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state != AlreadyDone {
-		t.Errorf("state = %v, want AlreadyDone (data dir exists + is git repo)", state)
+	if state != NeedsRun {
+		t.Errorf("state = %v, want NeedsRun (always prompt with current value as default)", state)
 	}
 	if ctx.Answers.DataDir != existingData {
 		t.Errorf("Answers.DataDir = %q, want %q (pre-populated from ~/.jotter)", ctx.Answers.DataDir, existingData)

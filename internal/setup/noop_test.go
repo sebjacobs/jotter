@@ -10,17 +10,16 @@ import (
 )
 
 // TestWizardIsNoOpOnHealthyInstall verifies the core guarantee: re-running
-// jotter setup on a system where everything is already configured correctly
-// makes no file writes, no git commits, and asks no questions.
+// jotter setup on a system where everything is already configured correctly,
+// with the user accepting every prompt default, makes no file writes and no
+// data-repo commits.
 //
-// Wire up a complete healthy install — .claude dir, .jotter pointing at a
-// git-initialised data dir with an origin remote, skills installed, and the
-// Bash(jotter:*) permission already in settings.json — then Run the wizard
-// with a Prompter that panics if asked anything. Every step should return
-// AlreadyDone or Skipped; ctx.Changed should stay false; the smoke step
-// should skip entirely (no data-repo commits).
+// The wizard is chatty by design — every re-run shows the current values as
+// prompt defaults so the user can see and edit them. But accepting every
+// default must be a no-op end-to-end: ctx.Changed stays false, the smoke
+// step skips (no data-repo commits), and no step reports StatusUpdated.
 func TestWizardIsNoOpOnHealthyInstall(t *testing.T) {
-	ctx := newStepCtx(t, &panicPrompter{t: t})
+	ctx := newStepCtx(t, &defaultsPrompter{})
 
 	// ~/.claude/ so claudeStep treats the env as applicable.
 	if err := os.MkdirAll(filepath.Join(ctx.Home, ".claude", "skills"), 0o755); err != nil {
@@ -108,18 +107,17 @@ func TestWizardIsNoOpOnHealthyInstall(t *testing.T) {
 	}
 }
 
-// panicPrompter fails the test if any prompt is asked — verifies the no-op
-// run never reaches a Run that calls into the prompter.
-type panicPrompter struct{ t *testing.T }
+// defaultsPrompter accepts every default value — simulates a user hitting
+// enter through every prompt. Any step that then writes or commits anything
+// is a no-op failure.
+type defaultsPrompter struct{}
 
-func (p *panicPrompter) Input(question, _ string) (string, error) {
-	p.t.Fatalf("panicPrompter: unexpected Input(%q) — no-op run should not prompt", question)
-	return "", nil
+func (defaultsPrompter) Input(_, defaultValue string) (string, error) {
+	return defaultValue, nil
 }
 
-func (p *panicPrompter) Confirm(question string, _ bool) (bool, error) {
-	p.t.Fatalf("panicPrompter: unexpected Confirm(%q) — no-op run should not prompt", question)
-	return false, nil
+func (defaultsPrompter) Confirm(_ string, defaultYes bool) (bool, error) {
+	return defaultYes, nil
 }
 
 func headSHA(t *testing.T, dir string) string {
