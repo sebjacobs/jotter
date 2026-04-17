@@ -18,6 +18,22 @@ After a successful binary install, prompt "Run `jotter setup` now? [y/N]" and in
 
 **Trade-offs:** slightly longer install flow for users who only want the binary, but gating behind an explicit opt-in keeps it safe. The wizard is already idempotent so running it later costs nothing.
 
+### All session entries should land on the starting branch, not the current branch
+
+Today every skill (`/start`, `/save`, `/break`, `/finish`) resolves the branch via `git rev-parse --abbrev-ref HEAD` at call time. That works while the branch sticks around, but fragments the session log whenever a branch is merged, renamed, or hopped mid-session: `/start` lands on `feature+foo.jsonl`, then after merging and cutting a release you run `/save` or `/finish` from `main`, and subsequent entries land on `main.jsonl`. The narrative is split across two files.
+
+**Target shape:** the session is identified by the branch where `/start` ran. Every follow-up skill (`/save`, `/break`, `/finish`) should pass `--branch <starting-branch>` explicitly rather than re-resolving from cwd — all four skills follow the same rule for consistency. `jotter write --branch` already exists as a required flag, so the fix is purely in the skill templates in `skills/` (which `jotter setup` installs).
+
+**Two design options — pick one:**
+1. **Look backward at finish time.** `/finish` queries jotter for the most recent `start` entry across all branches for this project that has no matching `finish`, uses that branch. Stateless but adds a discovery step. Needs a way to search across branches — `jotter search --type start --project <project>` might be enough.
+2. **Stash at start time.** `/start` writes the starting branch to a session-local file (e.g. `$JOTTER_DATA/.active-session`), `/finish` reads it and clears it. Simpler at finish, but adds state the user can't see and that needs cleanup on abandoned sessions.
+
+Option 1 feels more aligned with "append-only JSONL is the source of truth" — nothing to clean up, no hidden state. It also happens to be the natural fit for `/recover`, which can't inherit a starting branch (it's trying to *find* a lost session) and needs to scan across branches anyway. Once the discovery mechanism exists for `/recover`, the other skills can reuse it. Worth a short spec in `docs/specs/session-branch-continuity/` before changing the skills.
+
+**`/recover` is the awkward one:** run from anywhere, possibly post-crash, possibly days later. It needs to (1) discover the most recent unfinished session for this project across all branches, (2) confirm with the user which one to recover, and (3) write its recovery entry to that branch — not to cwd's branch. The discovery step is what makes option 1 the right call for all four skills.
+
+**Trade-offs:** the log branch decouples from the cwd branch — slightly more magic, but that's the point. Post-merge releases, branch cleanups, and worktree hops no longer fragment the session.
+
 ### Tombstone / soft-delete for entries
 
 Entries are append-only today — no way to mark one as superseded or retract a mistake without rewriting history in the data repo (which breaks the append-only guarantee and any git-based replication).
