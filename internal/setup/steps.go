@@ -7,6 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+
+	"github.com/sebjacobs/jotter/internal"
 )
 
 // DefaultSteps returns the seven-step wizard sequence in execution order.
@@ -51,10 +53,39 @@ type dataDirStep struct{}
 
 func (dataDirStep) Name() string { return "data directory" }
 
-func (dataDirStep) Detect(_ *Context) (State, error) { return NeedsRun, nil }
+// Detect looks for an existing ~/.jotter. If present and pointing at a valid
+// git repo, the step is already done (and the path is captured into Answers
+// so later steps see it). If ~/.jotter points at a path that's missing or
+// non-git, the step still needs to run but Answers.DataDir is pre-populated
+// so Run prompts with the existing path as the default rather than clobbering
+// the user's choice with the generic ~/session-logs-data default.
+func (dataDirStep) Detect(ctx *Context) (State, error) {
+	configPath := filepath.Join(ctx.Home, ".jotter")
+	if _, err := os.Stat(configPath); err != nil {
+		return NeedsRun, nil // no existing config
+	}
+	cfg, err := internal.LoadConfig(configPath)
+	if err != nil {
+		// Existing config is malformed — let Run overwrite it (after prompting).
+		return NeedsRun, nil
+	}
+	ctx.Answers.DataDir = cfg.DataDir
+
+	info, err := os.Stat(cfg.DataDir)
+	if err != nil || !info.IsDir() {
+		return NeedsRun, nil
+	}
+	if _, err := os.Stat(filepath.Join(cfg.DataDir, ".git")); err != nil {
+		return NeedsRun, nil
+	}
+	return AlreadyDone, nil
+}
 
 func (dataDirStep) Run(ctx *Context) (Result, error) {
-	defaultPath := filepath.Join(ctx.Home, "session-logs-data")
+	defaultPath := ctx.Answers.DataDir
+	if defaultPath == "" {
+		defaultPath = filepath.Join(ctx.Home, "session-logs-data")
+	}
 	path, err := ctx.Prompter.Input("Where should session logs live?", defaultPath)
 	if err != nil {
 		return Result{}, err
