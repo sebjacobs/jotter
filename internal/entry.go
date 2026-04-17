@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 )
@@ -17,17 +18,18 @@ type Entry struct {
 	Next      string `json:"next,omitempty"`
 }
 
-var validEntryTypes = map[string]bool{
-	"start":      true,
-	"checkpoint": true,
-	"note":       true,
-	"break":      true,
-	"finish":     true,
-}
+// Time format constants used across the codebase.
+const (
+	TimestampFormat = "2006-01-02T15:04:05"
+	DateFormat      = "2006-01-02"
+)
+
+// ValidEntryTypes lists all allowed entry types, in canonical order.
+var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "finish"}
 
 // IsValidEntryType checks whether a type string is one of the allowed entry types.
 func IsValidEntryType(t string) bool {
-	return validEntryTypes[t]
+	return slices.Contains(ValidEntryTypes, t)
 }
 
 // ReadEntries reads all entries from a JSONL file.
@@ -82,17 +84,18 @@ func quote(s string) string {
 	return string(b)
 }
 
-// FormatEntry renders an entry as markdown.
+// FormatEntry renders an entry as markdown with color.
+// Colors are automatically disabled when output is not a terminal.
 func FormatEntry(e Entry) string {
 	t, _ := time.Parse(time.RFC3339, e.Timestamp)
 	if t.IsZero() {
-		t, _ = time.Parse("2006-01-02T15:04:05", e.Timestamp)
+		t, _ = time.Parse(TimestampFormat, e.Timestamp)
 	}
-	heading := fmt.Sprintf("## %s | %s", t.Format("2006-01-02 15:04"), e.Type)
+	heading := fmt.Sprintf("## %s | %s", Dim(t.Format("2006-01-02 15:04")), ColorType(e.Type))
 
 	lines := []string{heading, "", e.Content}
 	if e.Next != "" {
-		lines = append(lines, "", fmt.Sprintf("**Next:** %s", e.Next))
+		lines = append(lines, "", fmt.Sprintf("%s %s", Bold("Next:"), e.Next))
 	}
 	return strings.Join(lines, "\n")
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -20,6 +20,7 @@ var lsCmd = &cobra.Command{
 
 func init() {
 	lsCmd.Flags().String("project", "", "List branches for this project")
+	_ = lsCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	rootCmd.AddCommand(lsCmd)
 }
 
@@ -66,7 +67,7 @@ func lsBranches(logsDir, project string) error {
 	matches, _ := filepath.Glob(filepath.Join(projectDir, "*.jsonl"))
 	var branches []branchInfo
 	for _, path := range matches {
-		name := strings.TrimSuffix(filepath.Base(path), ".jsonl")
+		name := internal.UnsanitiseBranch(strings.TrimSuffix(filepath.Base(path), ".jsonl"))
 		entries, err := internal.ReadEntries(path)
 		if err != nil {
 			continue
@@ -75,21 +76,21 @@ func lsBranches(logsDir, project string) error {
 		if len(entries) > 0 {
 			bi.count = len(entries)
 			bi.lastTS = entries[len(entries)-1].Timestamp
-			t, _ := time.Parse("2006-01-02T15:04:05", bi.lastTS)
-			bi.lastDate = t.Format("2006-01-02")
+			t, _ := time.Parse(internal.TimestampFormat, bi.lastTS)
+			bi.lastDate = t.Format(internal.DateFormat)
 		}
 		branches = append(branches, bi)
 	}
 
-	sort.Slice(branches, func(i, j int) bool {
-		return branches[i].lastTS > branches[j].lastTS
+	slices.SortFunc(branches, func(a, b branchInfo) int {
+		return strings.Compare(b.lastTS, a.lastTS)
 	})
 
 	for _, b := range branches {
 		if b.lastDate != "" {
-			fmt.Printf("%s  (%d entries, last: %s)\n", b.name, b.count, b.lastDate)
+			fmt.Printf("%s  %s\n", internal.Bold(b.name), internal.Dim(fmt.Sprintf("(%d entries, last: %s)", b.count, b.lastDate)))
 		} else {
-			fmt.Println(b.name)
+			fmt.Println(internal.Bold(b.name))
 		}
 	}
 	return nil
@@ -116,8 +117,8 @@ func lsProjects(logsDir string) error {
 			ts := logEntries[len(logEntries)-1].Timestamp
 			if ts > pi.lastTS {
 				pi.lastTS = ts
-				t, _ := time.Parse("2006-01-02T15:04:05", ts)
-				pi.lastDate = t.Format("2006-01-02")
+				t, _ := time.Parse(internal.TimestampFormat, ts)
+				pi.lastDate = t.Format(internal.DateFormat)
 			}
 		}
 		projects = append(projects, pi)
@@ -128,15 +129,15 @@ func lsProjects(logsDir string) error {
 		os.Exit(1)
 	}
 
-	sort.Slice(projects, func(i, j int) bool {
-		return projects[i].lastTS > projects[j].lastTS
+	slices.SortFunc(projects, func(a, b projectInfo) int {
+		return strings.Compare(b.lastTS, a.lastTS)
 	})
 
 	for _, p := range projects {
 		if p.lastDate != "" {
-			fmt.Printf("%s  (last: %s)\n", p.name, p.lastDate)
+			fmt.Printf("%s  %s\n", internal.Bold(p.name), internal.Dim(fmt.Sprintf("(last: %s)", p.lastDate)))
 		} else {
-			fmt.Println(p.name)
+			fmt.Println(internal.Bold(p.name))
 		}
 	}
 	return nil

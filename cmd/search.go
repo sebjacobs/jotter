@@ -23,6 +23,9 @@ func init() {
 	searchCmd.Flags().String("branch", "", "Scope to this branch")
 	searchCmd.Flags().String("since", "", "Filter entries from this date (YYYY-MM-DD)")
 	searchCmd.Flags().String("type", "", "Filter by entry type")
+	_ = searchCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = searchCmd.RegisterFlagCompletionFunc("branch", completeBranches)
+	_ = searchCmd.RegisterFlagCompletionFunc("type", completeTypes)
 	rootCmd.AddCommand(searchCmd)
 }
 
@@ -51,7 +54,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	var sinceTime time.Time
 	if since != "" {
-		sinceTime, err = time.Parse("2006-01-02", since)
+		sinceTime, err = time.Parse(internal.DateFormat, since)
 		if err != nil {
 			return fmt.Errorf("invalid --since date: %w", err)
 		}
@@ -68,7 +71,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 		for _, entry := range entries {
 			if !sinceTime.IsZero() {
-				entryTime, _ := time.Parse("2006-01-02T15:04:05", entry.Timestamp)
+				entryTime, _ := time.Parse(internal.TimestampFormat, entry.Timestamp)
 				if entryTime.Before(sinceTime) {
 					continue
 				}
@@ -88,7 +91,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			results = append(results, fmt.Sprintf("[%s]\n%s", rel, internal.FormatEntry(entry)))
+			results = append(results, fmt.Sprintf("%s\n%s", internal.Dim("["+rel+"]"), internal.FormatEntry(entry)))
 		}
 	}
 

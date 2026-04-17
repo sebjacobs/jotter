@@ -26,6 +26,9 @@ func init() {
 	_ = writeCmd.MarkFlagRequired("branch")
 	_ = writeCmd.MarkFlagRequired("type")
 	_ = writeCmd.MarkFlagRequired("content")
+	_ = writeCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = writeCmd.RegisterFlagCompletionFunc("branch", completeBranches)
+	_ = writeCmd.RegisterFlagCompletionFunc("type", completeTypes)
 	rootCmd.AddCommand(writeCmd)
 }
 
@@ -51,7 +54,7 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	}
 
 	entry := internal.Entry{
-		Timestamp: time.Now().Format("2006-01-02T15:04:05"),
+		Timestamp: time.Now().Format(internal.TimestampFormat),
 		Type:      entryType,
 		Content:   content,
 	}
@@ -91,6 +94,6 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	fmt.Printf("Wrote %s entry to %s\n", entryType, rel)
+	fmt.Printf("Wrote %s entry to %s\n", internal.ColorType(entryType), internal.Dim(rel))
 	return nil
 }

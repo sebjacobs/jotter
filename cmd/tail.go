@@ -21,6 +21,8 @@ func init() {
 	tailCmd.Flags().Int("limit", 1, "Number of entries to return")
 	_ = tailCmd.MarkFlagRequired("project")
 	_ = tailCmd.MarkFlagRequired("branch")
+	_ = tailCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = tailCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(tailCmd)
 }
 
@@ -45,11 +47,7 @@ func runTail(cmd *cobra.Command, args []string) error {
 	}
 
 	// Take the last `limit` entries
-	start := len(entries) - limit
-	if start < 0 {
-		start = 0
-	}
-	tail := entries[start:]
+	tail := entries[max(0, len(entries)-limit):]
 
 	formatted := make([]string, len(tail))
 	for i, e := range tail {

@@ -284,7 +284,7 @@ func TestTail_RendersNextField(t *testing.T) {
 		"--next", "Continue tomorrow")
 	stdout, _, _ := runJotter(t, dir,
 		"tail", "--project", "proj", "--branch", "main")
-	if !strings.Contains(stdout, "**Next:** Continue tomorrow") {
+	if !strings.Contains(stdout, "Next: Continue tomorrow") {
 		t.Errorf("missing next field: %s", stdout)
 	}
 }
@@ -385,6 +385,41 @@ func TestLs_ListsBranchesForProject(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "feature-auth") || !strings.Contains(stdout, "feature-ui") || !strings.Contains(stdout, "main") {
 		t.Errorf("missing branches: %s", stdout)
+	}
+}
+
+func TestBranchSanitisation_SlashConvertedToPlus(t *testing.T) {
+	dir := initDataDir(t)
+	stdout, _, code := runJotter(t, dir,
+		"write", "--project", "proj", "--branch", "feature/auth",
+		"--type", "start", "--content", "hello")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s", code, stdout)
+	}
+	// File on disk uses + separator
+	path := filepath.Join(dir, "logs", "proj", "feature+auth.jsonl")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected file at %s: %v", path, err)
+	}
+	// tail reads back via the slashed branch name
+	tailOut, _, tailCode := runJotter(t, dir,
+		"tail", "--project", "proj", "--branch", "feature/auth")
+	if tailCode != 0 {
+		t.Fatalf("tail exit code %d", tailCode)
+	}
+	if !strings.Contains(tailOut, "hello") {
+		t.Errorf("tail should return the entry, got: %s", tailOut)
+	}
+	// ls displays the original / form
+	lsOut, _, lsCode := runJotter(t, dir, "ls", "--project", "proj")
+	if lsCode != 0 {
+		t.Fatalf("ls exit code %d", lsCode)
+	}
+	if !strings.Contains(lsOut, "feature/auth") {
+		t.Errorf("ls should show original branch name, got: %s", lsOut)
+	}
+	if strings.Contains(lsOut, "feature+auth") {
+		t.Errorf("ls should not show sanitised name, got: %s", lsOut)
 	}
 }
 
