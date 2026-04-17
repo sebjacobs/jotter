@@ -154,6 +154,18 @@ go build -o bin/jotter .     # binary goes to bin/, not the repo root
 go test ./...                # run the full suite
 ```
 
+A [`justfile`](justfile) wraps the common dev tasks. Install [`just`](https://github.com/casey/just) (`brew install just`) and run:
+
+```bash
+just            # list recipes
+just build      # build binary into bin/
+just test       # run all tests
+just lint       # run golangci-lint (same config as CI)
+just check      # run build + test + lint — do this before pushing
+```
+
+`just check` mirrors what CI runs, so a green local check means a green CI run.
+
 Architecture breakdown — what lives where (skills, commands, internal packages) — is documented in [`CLAUDE.md`](CLAUDE.md). Release process (cutting a tagged release, bumping the changelog) is in [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Local builds report `jotter dev` for `--version`; real version info (semver tag, commit SHA, build date) is stamped in via `-ldflags` only on GoReleaser builds from tag pushes.

@@ -4,12 +4,24 @@ Append-only session log tool for Claude Code sessions. Go rewrite of the Python 
 
 ## Build & test
 
+The `justfile` is the canonical interface — **always run `just check` before pushing** to catch lint failures CI will otherwise flag.
+
+```bash
+just check                   # build + test + lint — mirrors CI, run before every push
+just build                   # build binary into bin/
+just test                    # run all tests (82 tests)
+just lint                    # golangci-lint (same config as CI)
+```
+
+Raw commands if needed:
+
 ```bash
 go build -o bin/jotter .     # build binary (always output to bin/, not repo root)
-go test ./...                # run all tests (81 tests)
+go test ./...                # run all tests
 go test ./cmd/               # command-level integration tests
 go test ./internal/          # unit tests for config, entry, storage
 go test ./internal/setup/    # unit tests for the setup wizard steps + framework
+golangci-lint run            # lint (CI job uses the same config)
 ```
 
 Tests build the binary once via `TestMain` and run it as a subprocess with a temp git-backed data dir. No mocks.
