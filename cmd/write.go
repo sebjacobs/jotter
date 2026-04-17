@@ -54,7 +54,7 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	}
 
 	entry := internal.Entry{
-		Timestamp: time.Now().Format("2006-01-02T15:04:05"),
+		Timestamp: time.Now().Format(internal.TimestampFormat),
 		Type:      entryType,
 		Content:   content,
 	}

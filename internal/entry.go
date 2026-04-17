@@ -18,6 +18,12 @@ type Entry struct {
 	Next      string `json:"next,omitempty"`
 }
 
+// Time format constants used across the codebase.
+const (
+	TimestampFormat = "2006-01-02T15:04:05"
+	DateFormat      = "2006-01-02"
+)
+
 // ValidEntryTypes lists all allowed entry types, in canonical order.
 var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "finish"}
 
@@ -83,7 +89,7 @@ func quote(s string) string {
 func FormatEntry(e Entry) string {
 	t, _ := time.Parse(time.RFC3339, e.Timestamp)
 	if t.IsZero() {
-		t, _ = time.Parse("2006-01-02T15:04:05", e.Timestamp)
+		t, _ = time.Parse(TimestampFormat, e.Timestamp)
 	}
 	heading := fmt.Sprintf("## %s | %s", Dim(t.Format("2006-01-02 15:04")), ColorType(e.Type))
 

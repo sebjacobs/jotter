@@ -76,8 +76,8 @@ func lsBranches(logsDir, project string) error {
 		if len(entries) > 0 {
 			bi.count = len(entries)
 			bi.lastTS = entries[len(entries)-1].Timestamp
-			t, _ := time.Parse("2006-01-02T15:04:05", bi.lastTS)
-			bi.lastDate = t.Format("2006-01-02")
+			t, _ := time.Parse(internal.TimestampFormat, bi.lastTS)
+			bi.lastDate = t.Format(internal.DateFormat)
 		}
 		branches = append(branches, bi)
 	}
@@ -117,8 +117,8 @@ func lsProjects(logsDir string) error {
 			ts := logEntries[len(logEntries)-1].Timestamp
 			if ts > pi.lastTS {
 				pi.lastTS = ts
-				t, _ := time.Parse("2006-01-02T15:04:05", ts)
-				pi.lastDate = t.Format("2006-01-02")
+				t, _ := time.Parse(internal.TimestampFormat, ts)
+				pi.lastDate = t.Format(internal.DateFormat)
 			}
 		}
 		projects = append(projects, pi)

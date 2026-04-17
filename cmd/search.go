@@ -54,7 +54,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	var sinceTime time.Time
 	if since != "" {
-		sinceTime, err = time.Parse("2006-01-02", since)
+		sinceTime, err = time.Parse(internal.DateFormat, since)
 		if err != nil {
 			return fmt.Errorf("invalid --since date: %w", err)
 		}
@@ -71,7 +71,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 		for _, entry := range entries {
 			if !sinceTime.IsZero() {
-				entryTime, _ := time.Parse("2006-01-02T15:04:05", entry.Timestamp)
+				entryTime, _ := time.Parse(internal.TimestampFormat, entry.Timestamp)
 				if entryTime.Before(sinceTime) {
 					continue
 				}
