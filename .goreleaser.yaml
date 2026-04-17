@@ -1,0 +1,47 @@
+version: 2
+
+project_name: jotter
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: jotter
+    main: ./
+    binary: jotter
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/sebjacobs/jotter/cmd.version={{.Version}}
+      - -X github.com/sebjacobs/jotter/cmd.commit={{.FullCommit}}
+      - -X github.com/sebjacobs/jotter/cmd.date={{.Date}}
+
+archives:
+  - formats: [tar.gz]
+    name_template: "jotter_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+changelog:
+  disable: true
+
+release:
+  header: |
+    See [CHANGELOG.md](https://github.com/sebjacobs/jotter/blob/main/CHANGELOG.md) for the full list of changes.
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot"
