@@ -14,18 +14,25 @@ go install github.com/sebjacobs/jotter@latest
 
 ## Configuration
 
-Jotter needs to know where your data repository lives. Set the `JOTTER_DATA` environment variable:
+Jotter is configured via a `.jotter` TOML file. Drop one in your home directory for a global default, and optionally one at the root of any project that should use a different data dir:
 
-```bash
-export JOTTER_DATA=~/path/to/session-logs-data
+```toml
+# ~/.jotter
+data_dir = "~/session-logs-data"
 ```
 
-Alternatively, write the path to `~/.config/jotter/config`:
-
-```bash
-mkdir -p ~/.config/jotter
-echo ~/path/to/session-logs-data > ~/.config/jotter/config
+```toml
+# ~/Projects/private-repo/.jotter  (overrides ~/.jotter for anything inside this directory)
+data_dir = "~/session-logs-private"
 ```
+
+When jotter runs, it walks up from the current directory looking for a `.jotter` file. The first one found wins; if nothing is found on the walk, it falls back to `~/.jotter`. One rule, no env vars, no XDG config dir.
+
+Supported keys:
+
+- `data_dir` (required) — path to the session-logs data directory. Leading `~` expands to the user's home dir. Relative paths resolve against the directory containing the `.jotter` file.
+
+Run `jotter config` to see which `.jotter` file jotter would use from your current cwd and the resolved `data_dir`. Use this before `jotter write` if you're unsure which store an entry will land in.
 
 The data directory must be a git repository. Jotter auto-commits every entry and pushes on session finish.
 
