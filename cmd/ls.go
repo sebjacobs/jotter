@@ -86,7 +86,8 @@ func lsEntries(dataDir, project, branch string) error {
 		os.Exit(1)
 	}
 
-	for _, e := range entries {
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
 		t, _ := time.Parse(internal.TimestampFormat, e.Timestamp)
 		ts := t.Format("2006-01-02 15:04")
 		fmt.Printf("%s  %-10s  %s\n", internal.Dim(ts), internal.ColorType(e.Type), entryTitle(e.Content))
@@ -137,7 +138,7 @@ func lsBranches(logsDir, project string) error {
 			bi.count = len(entries)
 			bi.lastTS = entries[len(entries)-1].Timestamp
 			t, _ := time.Parse(internal.TimestampFormat, bi.lastTS)
-			bi.lastDate = t.Format(internal.DateFormat)
+			bi.lastDate = t.Format("2006-01-02 15:04")
 		}
 		branches = append(branches, bi)
 	}
@@ -178,7 +179,7 @@ func lsProjects(logsDir string) error {
 			if ts > pi.lastTS {
 				pi.lastTS = ts
 				t, _ := time.Parse(internal.TimestampFormat, ts)
-				pi.lastDate = t.Format(internal.DateFormat)
+				pi.lastDate = t.Format("2006-01-02 15:04")
 			}
 		}
 		projects = append(projects, pi)
