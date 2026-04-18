@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.1] — 2026-04-18
+
+### Changed
+- `jotter ls --project P --branch B` now lists entries newest first, matching the descending order of `ls` and `ls --project`. All three `ls` variants now share a single mental model — newest at the top. `tail` is unchanged and still prints oldest-of-tail first (standard Unix semantics).
+- `jotter ls` and `jotter ls --project P` now show `HH:MM` alongside the date in the `last:` field, so recency is obvious at a glance without a follow-up `tail`.
+
 ## [v0.3.0] — 2026-04-18
 
 ### Added
@@ -51,7 +57,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.3.1...HEAD
+[v0.3.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.1
 [v0.3.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.0
 [v0.2.3]: https://github.com/sebjacobs/jotter/releases/tag/v0.2.3
 [v0.2.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.2.2
