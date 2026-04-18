@@ -182,6 +182,71 @@ func TestSkillsStepIdempotent(t *testing.T) {
 	}
 }
 
+func TestSkillsStepPromptsBeforeOverwrite(t *testing.T) {
+	ctx := newStepCtx(t, &stubPrompter{confirms: []bool{false}}) // decline overwrite
+	ctx.SkillsFS = testSkillsFS
+	ctx.SkillsRoot = "testdata/skills"
+
+	// Seed one skill with local edits that differ from the bundled template.
+	installed := filepath.Join(ctx.Home, ".claude", "skills")
+	if err := os.MkdirAll(filepath.Join(installed, "alpha"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	localContent := []byte("# local customisation — do not clobber\n")
+	alphaPath := filepath.Join(installed, "alpha", "SKILL.md")
+	if err := os.WriteFile(alphaPath, localContent, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := (skillsStep{}).Run(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// alpha declined; beta is a fresh install (no prompt), so status is Updated.
+	if result.Status != StatusUpdated {
+		t.Errorf("status = %v, want StatusUpdated (1 installed + 1 kept)", result.Status)
+	}
+
+	got, err := os.ReadFile(alphaPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(localContent) {
+		t.Errorf("local content clobbered despite decline; got %q, want %q", string(got), string(localContent))
+	}
+}
+
+func TestSkillsStepOverwritesOnAccept(t *testing.T) {
+	ctx := newStepCtx(t, &stubPrompter{confirms: []bool{true}}) // accept overwrite
+	ctx.SkillsFS = testSkillsFS
+	ctx.SkillsRoot = "testdata/skills"
+
+	installed := filepath.Join(ctx.Home, ".claude", "skills")
+	if err := os.MkdirAll(filepath.Join(installed, "alpha"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	alphaPath := filepath.Join(installed, "alpha", "SKILL.md")
+	if err := os.WriteFile(alphaPath, []byte("# stale\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	result, err := (skillsStep{}).Run(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != StatusUpdated {
+		t.Errorf("status = %v, want StatusUpdated", result.Status)
+	}
+
+	got, err := os.ReadFile(alphaPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), "test fixture") {
+		t.Errorf("skill not overwritten on accept; got %q", string(got))
+	}
+}
+
 func TestPermissionStepWrapsMerge(t *testing.T) {
 	ctx := newStepCtx(t, &stubPrompter{})
 	if err := os.MkdirAll(filepath.Join(ctx.Home, ".claude"), 0o755); err != nil {
