@@ -20,7 +20,9 @@ var lsCmd = &cobra.Command{
 
 func init() {
 	lsCmd.Flags().String("project", "", "List branches for this project")
+	lsCmd.Flags().String("branch", "", "List entries for this branch (requires --project)")
 	_ = lsCmd.RegisterFlagCompletionFunc("project", completeProjects)
+	_ = lsCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(lsCmd)
 }
 
@@ -39,6 +41,12 @@ type projectInfo struct {
 
 func runLs(cmd *cobra.Command, args []string) error {
 	project, _ := cmd.Flags().GetString("project")
+	branch, _ := cmd.Flags().GetString("branch")
+
+	if branch != "" && project == "" {
+		fmt.Fprintln(os.Stderr, "--branch requires --project")
+		os.Exit(1)
+	}
 
 	dataDir, err := internal.GetDataDir()
 	if err != nil {
@@ -51,10 +59,62 @@ func runLs(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
+	if branch != "" {
+		return lsEntries(dataDir, project, branch)
+	}
 	if project != "" {
 		return lsBranches(logsDir, project)
 	}
 	return lsProjects(logsDir)
+}
+
+func lsEntries(dataDir, project, branch string) error {
+	path, err := internal.JSONLPath(dataDir, project, branch)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		fmt.Fprintf(os.Stderr, "No logs for %s/%s\n", project, branch)
+		os.Exit(1)
+	}
+	entries, err := internal.ReadEntries(path)
+	if err != nil {
+		return err
+	}
+	if len(entries) == 0 {
+		fmt.Fprintf(os.Stderr, "No entries for %s/%s\n", project, branch)
+		os.Exit(1)
+	}
+
+	for _, e := range entries {
+		t, _ := time.Parse(internal.TimestampFormat, e.Timestamp)
+		ts := t.Format("2006-01-02 15:04")
+		fmt.Printf("%s  %-10s  %s\n", internal.Dim(ts), internal.ColorType(e.Type), entryTitle(e.Content))
+	}
+	return nil
+}
+
+// entryTitle extracts a short single-line title from the first non-empty
+// line of an entry's content, stripping leading markdown markers.
+func entryTitle(content string) string {
+	for raw := range strings.SplitSeq(content, "\n") {
+		line := strings.TrimSpace(raw)
+		if line == "" {
+			continue
+		}
+		line = strings.TrimLeft(line, "#>- \t")
+		line = strings.ReplaceAll(line, "**", "")
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		const maxLen = 100
+		if len([]rune(line)) > maxLen {
+			line = string([]rune(line)[:maxLen]) + "…"
+		}
+		return line
+	}
+	return ""
 }
 
 func lsBranches(logsDir, project string) error {

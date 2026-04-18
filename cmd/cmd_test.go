@@ -463,6 +463,51 @@ func TestLs_BranchListingShowsCountAndDate(t *testing.T) {
 	}
 }
 
+func TestLs_EntriesForBranch(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "feature/x",
+		"--type", "start", "--content", "**Kickoff** for feature x\n\nmore detail")
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "feature/x",
+		"--type", "checkpoint", "--content", "## Progress update\nwip")
+
+	stdout, _, code := runJotter(t, dir,
+		"ls", "--project", "proj", "--branch", "feature/x")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stdout)
+	}
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d: %s", len(lines), stdout)
+	}
+	if !strings.Contains(lines[0], "start") || !strings.Contains(lines[0], "Kickoff for feature x") {
+		t.Errorf("first line missing title/type: %s", lines[0])
+	}
+	if !strings.Contains(lines[1], "checkpoint") || !strings.Contains(lines[1], "Progress update") {
+		t.Errorf("second line missing title/type: %s", lines[1])
+	}
+	if !regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}`).MatchString(lines[0]) {
+		t.Errorf("missing timestamp: %s", lines[0])
+	}
+}
+
+func TestLs_BranchWithoutProjectExitsWithError(t *testing.T) {
+	dir := initDataDir(t)
+	_, _, code := runJotter(t, dir, "ls", "--branch", "main")
+	if code == 0 {
+		t.Error("expected non-zero exit code")
+	}
+}
+
+func TestLs_UnknownBranchExitsWithError(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "start", "--content", "hi")
+	_, _, code := runJotter(t, dir, "ls", "--project", "proj", "--branch", "nope")
+	if code == 0 {
+		t.Error("expected non-zero exit code")
+	}
+}
+
 func TestLs_NoProjectsExitsWithError(t *testing.T) {
 	dir := t.TempDir()
 	os.MkdirAll(filepath.Join(dir, "logs"), 0o755)
