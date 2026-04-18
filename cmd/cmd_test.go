@@ -479,10 +479,10 @@ func TestLs_EntriesForBranch(t *testing.T) {
 	if len(lines) != 2 {
 		t.Fatalf("expected 2 lines, got %d: %s", len(lines), stdout)
 	}
-	if !strings.Contains(lines[0], "start") || !strings.Contains(lines[0], "Kickoff for feature x") {
+	if !strings.Contains(lines[0], "checkpoint") || !strings.Contains(lines[0], "Progress update") {
 		t.Errorf("first line missing title/type: %s", lines[0])
 	}
-	if !strings.Contains(lines[1], "checkpoint") || !strings.Contains(lines[1], "Progress update") {
+	if !strings.Contains(lines[1], "start") || !strings.Contains(lines[1], "Kickoff for feature x") {
 		t.Errorf("second line missing title/type: %s", lines[1])
 	}
 	if !regexp.MustCompile(`\d{4}-\d{2}-\d{2} \d{2}:\d{2}`).MatchString(lines[0]) {

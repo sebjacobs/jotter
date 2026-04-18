@@ -86,7 +86,8 @@ func lsEntries(dataDir, project, branch string) error {
 		os.Exit(1)
 	}
 
-	for _, e := range entries {
+	for i := len(entries) - 1; i >= 0; i-- {
+		e := entries[i]
 		t, _ := time.Parse(internal.TimestampFormat, e.Timestamp)
 		ts := t.Format("2006-01-02 15:04")
 		fmt.Printf("%s  %-10s  %s\n", internal.Dim(ts), internal.ColorType(e.Type), entryTitle(e.Content))
