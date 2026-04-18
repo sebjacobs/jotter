@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.3.2] — 2026-04-18
+
+### Added
+- `install.sh` now offers to run `jotter setup` immediately after installing the binary. Shrinks time-to-first-use — one `curl | sh` can take a new machine from nothing to a fully-wired Claude Code session (data repo initialised, skills installed, permissions granted, smoke test passed). Reads y/N from `/dev/tty` so the prompt works under `curl | sh` where stdin is a pipe; skipped entirely when no tty is attached so CI/docker installs don't hang. Defaults to No.
+
 ## [v0.3.1] — 2026-04-18
 
 ### Changed
@@ -57,7 +62,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.3.2...HEAD
+[v0.3.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.2
 [v0.3.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.1
 [v0.3.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.0
 [v0.2.3]: https://github.com/sebjacobs/jotter/releases/tag/v0.2.3
