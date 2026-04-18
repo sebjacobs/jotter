@@ -103,9 +103,20 @@ jotter tail --project myapp --branch feature/auth --limit 5    # last 5 entries
 List projects or branches.
 
 ```bash
-jotter ls                          # all projects with last activity date
-jotter ls --project myapp          # branches in myapp with entry counts
+jotter ls                                              # all projects with last activity date
+jotter ls --project myapp                              # branches in myapp with entry counts
+jotter ls --project myapp --branch feature/auth        # entries on that branch, one per line (timestamp, type, title)
 ```
+
+A typical `ls --project --branch` run looks like:
+
+```
+2026-04-11 12:00  finish      OAuth flow — initial implementation done, tests green.
+2026-04-14 21:49  checkpoint  Refresh-token spike complete — committed. Rotation handling next.
+2026-04-16 15:45  finish      PR merged — OAuth end-to-end shipped.
+```
+
+Titles are extracted from the first non-empty line of each entry's content, with basic markdown markers stripped.
 
 ### search
 
