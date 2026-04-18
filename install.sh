@@ -138,3 +138,22 @@ case ":$PATH:" in
     log "  https://github.com/$REPO#setup"
     ;;
 esac
+
+# --- 8. Offer to run `jotter setup` ---
+# stdin is piped under `curl | sh`, so a normal `read` won't reach the user —
+# read from /dev/tty directly. Skip entirely when no tty is attached
+# (CI, docker build) so automated installs aren't blocked on a prompt.
+if [ -r /dev/tty ] && [ -w /dev/tty ]; then
+  log ""
+  printf 'Run `jotter setup` now to wire up Claude Code? [y/N] ' >/dev/tty
+  reply=""
+  read -r reply </dev/tty || reply=""
+  case "$reply" in
+    y|Y|yes|YES|Yes)
+      exec "$INSTALL_DIR/jotter" setup
+      ;;
+    *)
+      log "Skipped. Run '$INSTALL_DIR/jotter setup' when you're ready."
+      ;;
+  esac
+fi

@@ -10,14 +10,6 @@ Show human-friendly relative times ("2h ago", "yesterday") in `jotter ls` output
 
 ## Next
 
-### Offer to run `jotter setup` from `install.sh`
-
-After a successful binary install, prompt "Run `jotter setup` now? [y/N]" and invoke the wizard on yes. Shrinks time-to-first-use — one command gets a new user from nothing to `/start` working.
-
-**Target shape:** read the y/N from `/dev/tty` (stdin is piped under `curl | sh`, so a normal `read` won't work). Skip the prompt entirely when `/dev/tty` isn't available (CI, docker build). Default to No so automated installs aren't surprised by an interactive wizard. Invoke `"$INSTALL_DIR/jotter" setup` directly, since `$INSTALL_DIR` may not be on `$PATH` yet.
-
-**Trade-offs:** slightly longer install flow for users who only want the binary, but gating behind an explicit opt-in keeps it safe. The wizard is already idempotent so running it later costs nothing.
-
 ### All session entries should land on the starting branch, not the current branch
 
 Today every skill (`/start`, `/save`, `/break`, `/finish`) resolves the branch via `git rev-parse --abbrev-ref HEAD` at call time. That works while the branch sticks around, but fragments the session log whenever a branch is merged, renamed, or hopped mid-session: `/start` lands on `feature+foo.jsonl`, then after merging and cutting a release you run `/save` or `/finish` from `main`, and subsequent entries land on `main.jsonl`. The narrative is split across two files.
