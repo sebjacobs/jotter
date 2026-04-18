@@ -214,6 +214,7 @@ func (skillsStep) Run(ctx *Context) (Result, error) {
 	var (
 		copied  int
 		updated int
+		kept    int
 	)
 	root := ctx.skillsRoot()
 	err := fs.WalkDir(ctx.SkillsFS, root, func(path string, d fs.DirEntry, err error) error {
@@ -233,14 +234,32 @@ func (skillsStep) Run(ctx *Context) (Result, error) {
 			return err
 		}
 		existing, readErr := os.ReadFile(dest)
-		if readErr == nil && string(existing) == string(data) {
+		switch {
+		case os.IsNotExist(readErr):
+			copied++
+			return os.WriteFile(dest, data, 0o644)
+		case readErr != nil:
+			return readErr
+		case string(existing) == string(data):
 			return nil // already up to date
 		}
-		if readErr == nil {
-			updated++
-		} else {
-			copied++
+
+		// Local copy differs from the bundled template — preserve by default.
+		// The skills are plain markdown that users are expected to edit; a
+		// silent overwrite would clobber those edits on every re-run of
+		// `jotter setup`.
+		confirm, err := ctx.Prompter.Confirm(
+			fmt.Sprintf("%s differs from the bundled template — overwrite?", dest),
+			false,
+		)
+		if err != nil {
+			return err
 		}
+		if !confirm {
+			kept++
+			return nil
+		}
+		updated++
 		return os.WriteFile(dest, data, 0o644)
 	})
 	if err != nil {
@@ -248,12 +267,14 @@ func (skillsStep) Run(ctx *Context) (Result, error) {
 	}
 
 	switch {
-	case copied == 0 && updated == 0:
+	case copied == 0 && updated == 0 && kept == 0:
 		return Result{Status: StatusSkipped, Message: "all skills already up to date"}, nil
-	case updated == 0:
+	case copied == 0 && updated == 0:
+		return Result{Status: StatusSkipped, Message: fmt.Sprintf("kept %d local skill(s) unchanged", kept)}, nil
+	case updated == 0 && kept == 0:
 		return Result{Status: StatusOK, Message: fmt.Sprintf("installed %d skills to %s", copied, skillsRoot)}, nil
 	default:
-		return Result{Status: StatusUpdated, Message: fmt.Sprintf("installed %d, updated %d in %s", copied, updated, skillsRoot)}, nil
+		return Result{Status: StatusUpdated, Message: fmt.Sprintf("installed %d, updated %d, kept %d in %s", copied, updated, kept, skillsRoot)}, nil
 	}
 }
 
