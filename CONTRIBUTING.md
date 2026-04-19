@@ -23,3 +23,11 @@ goreleaser release --snapshot --clean
 ```
 
 This builds all four target archives into `dist/` without publishing. If the snapshot succeeds, the tagged release will too.
+
+## Homebrew tap
+
+Jotter publishes a Homebrew **cask** (not a formula) to [`sebjacobs/homebrew-tap`](https://github.com/sebjacobs/homebrew-tap) on every release. GoReleaser commits the cask update directly to the tap repo — no manual editing needed.
+
+Cask rather than formula because Homebrew's own [Formula Cookbook](https://docs.brew.sh/Formula-Cookbook#homebrew-terminology) defines a formula as "builds from upstream sources" and a cask as "installs pre-compiled binaries built and signed by upstream". Jotter ships pre-built tarballs, so it's a cask by Homebrew's definition. Linux binary casks only became possible after [Homebrew/brew#19121](https://github.com/Homebrew/brew/pull/19121) landed in Feb 2025.
+
+This requires a `HOMEBREW_TAP_GITHUB_TOKEN` repo secret: a GitHub Personal Access Token (fine-grained, `contents: write` on `sebjacobs/homebrew-tap`, no other permissions). Set it under Settings → Secrets and variables → Actions. If the token is missing or expired, the tap update step will fail but the main release will still publish.
