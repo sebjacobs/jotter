@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/sebjacobs/jotter/internal"
 	"github.com/spf13/cobra"
@@ -42,6 +41,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		term = strings.ToLower(args[0])
 	}
 
+	sinceTime, untilTime, err := parseWindow(since, until)
+	if err != nil {
+		return err
+	}
+
 	dataDir, err := internal.GetDataDir()
 	if err != nil {
 		return err
@@ -57,26 +61,6 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	var sinceTime time.Time
-	if since != "" {
-		sinceTime, err = parseBoundary(since, false)
-		if err != nil {
-			return fmt.Errorf("invalid --since value: %w", err)
-		}
-	}
-
-	var untilTime time.Time
-	if until != "" {
-		untilTime, err = parseBoundary(until, true)
-		if err != nil {
-			return fmt.Errorf("invalid --until value: %w", err)
-		}
-	}
-
-	if !sinceTime.IsZero() && !untilTime.IsZero() && untilTime.Before(sinceTime) {
-		return fmt.Errorf("--until must not be earlier than --since")
-	}
-
 	var results []string
 	for _, path := range paths {
 		entries, err := internal.ReadEntries(path)
@@ -87,14 +71,8 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		rel, _ := filepath.Rel(logsDir, path)
 
 		for _, entry := range entries {
-			if !sinceTime.IsZero() || !untilTime.IsZero() {
-				entryTime, _ := time.Parse(internal.TimestampFormat, entry.Timestamp)
-				if !sinceTime.IsZero() && entryTime.Before(sinceTime) {
-					continue
-				}
-				if !untilTime.IsZero() && entryTime.After(untilTime) {
-					continue
-				}
+			if !inWindow(entry.Timestamp, sinceTime, untilTime) {
+				continue
 			}
 
 			if entryType != "" && entry.Type != entryType {
@@ -122,21 +100,4 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	fmt.Println(strings.Join(results, "\n\n"))
 	return nil
-}
-
-// parseBoundary parses either a date (YYYY-MM-DD) or full timestamp
-// (YYYY-MM-DDTHH:MM:SS). For date-only values, endOfDay=true promotes
-// the result to 23:59:59 so --until <date> is inclusive of that day.
-func parseBoundary(s string, endOfDay bool) (time.Time, error) {
-	if t, err := time.Parse(internal.TimestampFormat, s); err == nil {
-		return t, nil
-	}
-	t, err := time.Parse(internal.DateFormat, s)
-	if err != nil {
-		return time.Time{}, fmt.Errorf("expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, got %q", s)
-	}
-	if endOfDay {
-		t = t.Add(24*time.Hour - time.Second)
-	}
-	return t, nil
 }
