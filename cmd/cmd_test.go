@@ -658,6 +658,83 @@ func TestSearch_ScopedBySince(t *testing.T) {
 	}
 }
 
+func TestSearch_ScopedByUntil(t *testing.T) {
+	dir := initDataDir(t)
+	os.MkdirAll(filepath.Join(dir, "logs", "proj"), 0o755)
+	jsonlFile := filepath.Join(dir, "logs", "proj", "main.jsonl")
+	old := `{"timestamp":"2026-01-01T10:00:00","type":"start","content":"Old auth work"}`
+	recent := `{"timestamp":"2026-04-10T10:00:00","type":"checkpoint","content":"Recent auth work"}`
+	os.WriteFile(jsonlFile, []byte(old+"\n"+recent+"\n"), 0o644)
+
+	stdout, _, code := runJotter(t, dir, "search", "auth", "--until", "2026-03-01")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Old auth work") {
+		t.Errorf("missing old entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "Recent auth work") {
+		t.Errorf("should not contain recent entry: %s", stdout)
+	}
+}
+
+func TestSearch_ScopedBySingleDay(t *testing.T) {
+	dir := initDataDir(t)
+	os.MkdirAll(filepath.Join(dir, "logs", "proj"), 0o755)
+	jsonlFile := filepath.Join(dir, "logs", "proj", "main.jsonl")
+	before := `{"timestamp":"2026-04-09T23:59:59","type":"checkpoint","content":"Day before entry"}`
+	morning := `{"timestamp":"2026-04-10T08:00:00","type":"start","content":"Target day morning"}`
+	evening := `{"timestamp":"2026-04-10T20:00:00","type":"finish","content":"Target day evening"}`
+	after := `{"timestamp":"2026-04-11T00:00:01","type":"note","content":"Day after entry"}`
+	os.WriteFile(jsonlFile, []byte(before+"\n"+morning+"\n"+evening+"\n"+after+"\n"), 0o644)
+
+	stdout, _, code := runJotter(t, dir, "search", "--since", "2026-04-10", "--until", "2026-04-10")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Target day morning") || !strings.Contains(stdout, "Target day evening") {
+		t.Errorf("missing target day entries: %s", stdout)
+	}
+	if strings.Contains(stdout, "Day before entry") || strings.Contains(stdout, "Day after entry") {
+		t.Errorf("should only contain target day: %s", stdout)
+	}
+}
+
+func TestSearch_ScopedByTimestamp(t *testing.T) {
+	dir := initDataDir(t)
+	os.MkdirAll(filepath.Join(dir, "logs", "proj"), 0o755)
+	jsonlFile := filepath.Join(dir, "logs", "proj", "main.jsonl")
+	morning := `{"timestamp":"2026-04-10T09:00:00","type":"start","content":"Morning entry"}`
+	noon := `{"timestamp":"2026-04-10T12:00:00","type":"checkpoint","content":"Noon entry"}`
+	evening := `{"timestamp":"2026-04-10T18:00:00","type":"finish","content":"Evening entry"}`
+	os.WriteFile(jsonlFile, []byte(morning+"\n"+noon+"\n"+evening+"\n"), 0o644)
+
+	stdout, _, code := runJotter(t, dir, "search",
+		"--since", "2026-04-10T10:00:00",
+		"--until", "2026-04-10T15:00:00")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Noon entry") {
+		t.Errorf("missing noon entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "Morning entry") || strings.Contains(stdout, "Evening entry") {
+		t.Errorf("should only contain noon entry: %s", stdout)
+	}
+}
+
+func TestSearch_InvalidBoundary(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	_, stderr, code := runJotter(t, dir, "search", "--since", "yesterday")
+	if code == 0 {
+		t.Error("expected non-zero exit code for invalid --since")
+	}
+	if !strings.Contains(stderr, "invalid --since") {
+		t.Errorf("missing error message: %s", stderr)
+	}
+}
+
 func TestSearch_WithoutTermReturnsAll(t *testing.T) {
 	dir := initDataDir(t)
 	populateSearchData(t, dir)
