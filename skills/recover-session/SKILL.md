@@ -96,6 +96,6 @@ Use `--type finish` so the log correctly marks the session as closed.
 
 ### 4 — Report
 
-> "Recovered session from [date/time]. Key context: [1-2 sentence summary]. Ready to continue with `/start`."
+> "Recovered session from [date/time]. Key context: [1-2 sentence summary]."
 
 Flag anything that couldn't be recovered (very short session, mostly tool output).

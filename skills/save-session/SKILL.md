@@ -1,38 +1,32 @@
 ---
 name: save-session
-description: Mid-session checkpoint — snapshot current decisions and progress without archiving or cleaning up. Use when the user says "/save", "checkpoint", "save progress", or before risky operations like schema migrations, large refactors, or long-running tasks.
+description: Write a mid-session checkpoint entry to the jotter log. Use when the user says "/save", "checkpoint", "save progress", or before risky operations like schema migrations, large refactors, or long-running tasks.
 ---
 
 # Save Session
 
-Mid-session checkpoint. Captures current progress and decisions without the full end-of-session routine. Does **not** archive, move roadmap items, or propose commits.
-
-Use before risky operations (migrations, large refactors) or when you want to preserve state before a `/clear`.
+Writes a `checkpoint` entry to the jotter log — a snapshot of current progress and decisions without ending the session. Use before risky operations, or to preserve state before a `/clear`.
 
 ---
 
 ## Steps
 
-### 0 — Get context
-
-Run `date` to get the current time.
-
-Determine the project name and branch:
+### 1 — Determine project and branch
 
 ```bash
 basename "$(git rev-parse --show-toplevel)"
 git rev-parse --abbrev-ref HEAD
 ```
 
-### 1 — Read recent context
+### 2 — Read recent context (avoid duplication)
 
 ```bash
 jotter tail --project <project> --branch <branch> --limit 3
 ```
 
-Review the last few entries to understand what's already been captured — avoid duplicating.
+Review what's already been captured so the checkpoint adds new information rather than repeating earlier entries.
 
-### 2 — Write the checkpoint
+### 3 — Write the checkpoint
 
 ```bash
 jotter write \
@@ -43,10 +37,4 @@ jotter write \
   --next "<what you're about to do next>"
 ```
 
-Keep it concise — a few bullet points per topic. This is a snapshot, not a session summary.
-
-### 3 — Confirm
-
-> "Checkpoint saved at HH:MM. Safe to `/clear` or continue."
-
-Do **not** propose commits, update the roadmap, or archive anything. That's `/finish`'s job.
+Keep it concise — a snapshot, not a summary.
