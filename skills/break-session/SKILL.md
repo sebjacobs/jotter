@@ -1,30 +1,24 @@
 ---
 name: break-session
-description: Save mid-session state before a break. Use when the user says "/break", "taking a break", "let's take a break", "back in a bit", "stepping away", "pausing", or similar.
+description: Write a break entry to the jotter log before stepping away mid-session. Use when the user says "/break", "taking a break", "let's take a break", "back in a bit", "stepping away", "pausing", or similar.
 ---
 
 # Break Session
 
-Quick checkpoint before stepping away. Captures current state, commits any dirty work, cancels the session timer.
+Writes a `break` entry to the jotter log — a snapshot of current state and what to pick up on return. Use when stepping away mid-session without ending it.
 
 ---
 
 ## Steps
 
-### 0 — Get context
-
-Run `date` to get the current time.
-
-Determine the project name and branch:
+### 1 — Determine project and branch
 
 ```bash
 basename "$(git rev-parse --show-toplevel)"
 git rev-parse --abbrev-ref HEAD
 ```
 
-### 1 — Write the break entry
-
-Summarise current progress in a few bullet points, then write it:
+### 2 — Write the break entry
 
 ```bash
 jotter write \
@@ -35,19 +29,4 @@ jotter write \
   --next "<what to pick up on return>"
 ```
 
-### 2 — Commit dirty work
-
-```bash
-git status
-git diff --stat
-```
-
-If there are uncommitted changes worth saving, propose a grouping to the user and commit after approval. Don't leave half-done work uncommitted across a break.
-
-### 3 — Cancel session timer
-
-If a session cron timer is running, cancel it with `CronDelete <job-id>`. `/start` will set a fresh one on return.
-
-### 4 — Confirm
-
-> "Break saved. Run `/start` when you're back."
+The `--next` field is what `/start` will surface when the session resumes.
