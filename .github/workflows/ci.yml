@@ -23,3 +23,12 @@ jobs:
         with:
           go-version-file: go.mod
       - uses: golangci/golangci-lint-action@v7
+
+  release-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          version: latest
+          args: check

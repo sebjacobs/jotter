@@ -16,8 +16,12 @@ test:
 lint:
     golangci-lint run
 
-# Run every check CI runs — build, test, lint. Use before pushing.
-check: build test lint
+# Validate the GoReleaser config against its JSON Schema and semantic rules.
+release-check:
+    goreleaser check
+
+# Run every check CI runs — build, test, lint, release-check. Use before pushing.
+check: build test lint release-check
 
 # Run a GoReleaser dry-run to validate the release config.
 release-snapshot:
