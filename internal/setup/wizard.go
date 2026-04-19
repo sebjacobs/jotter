@@ -58,7 +58,7 @@ type Step interface {
 type Context struct {
 	Home       string   // user home dir — injectable for tests via t.Setenv
 	SkillsFS   embed.FS // embedded skills tree
-	SkillsRoot string   // root inside SkillsFS (default "skills"; tests may override)
+	SkillsRoot string   // root inside SkillsFS (default "integrations/claude"; tests may override)
 	Prompter   Prompter // prompt abstraction; tests inject canned answers
 	Answers    *Answers // accumulated user input across steps
 	Out        io.Writer
@@ -70,10 +70,10 @@ type Context struct {
 }
 
 // skillsRoot returns the embed-tree root path for skills, defaulting to
-// "skills" when Context.SkillsRoot is unset.
+// "integrations/claude" when Context.SkillsRoot is unset.
 func (c *Context) skillsRoot() string {
 	if c.SkillsRoot == "" {
-		return "skills"
+		return "integrations/claude"
 	}
 	return c.SkillsRoot
 }

@@ -136,13 +136,13 @@ func TestConfigStepPromptsBeforeOverwrite(t *testing.T) {
 	}
 }
 
-//go:embed all:testdata/skills
+//go:embed all:testdata/integrations/claude
 var testSkillsFS embed.FS
 
 func TestSkillsStepCopiesAllFiles(t *testing.T) {
 	ctx := newStepCtx(t, &stubPrompter{})
 	ctx.SkillsFS = testSkillsFS
-	ctx.SkillsRoot = "testdata/skills"
+	ctx.SkillsRoot = "testdata/integrations/claude"
 
 	result, err := (skillsStep{}).Run(ctx)
 	if err != nil {
@@ -168,7 +168,7 @@ func TestSkillsStepCopiesAllFiles(t *testing.T) {
 func TestSkillsStepIdempotent(t *testing.T) {
 	ctx := newStepCtx(t, &stubPrompter{})
 	ctx.SkillsFS = testSkillsFS
-	ctx.SkillsRoot = "testdata/skills"
+	ctx.SkillsRoot = "testdata/integrations/claude"
 
 	if _, err := (skillsStep{}).Run(ctx); err != nil {
 		t.Fatal(err)
@@ -185,7 +185,7 @@ func TestSkillsStepIdempotent(t *testing.T) {
 func TestSkillsStepPromptsBeforeOverwrite(t *testing.T) {
 	ctx := newStepCtx(t, &stubPrompter{confirms: []bool{false}}) // decline overwrite
 	ctx.SkillsFS = testSkillsFS
-	ctx.SkillsRoot = "testdata/skills"
+	ctx.SkillsRoot = "testdata/integrations/claude"
 
 	// Seed one skill with local edits that differ from the bundled template.
 	installed := filepath.Join(ctx.Home, ".claude", "skills")
@@ -219,7 +219,7 @@ func TestSkillsStepPromptsBeforeOverwrite(t *testing.T) {
 func TestSkillsStepOverwritesOnAccept(t *testing.T) {
 	ctx := newStepCtx(t, &stubPrompter{confirms: []bool{true}}) // accept overwrite
 	ctx.SkillsFS = testSkillsFS
-	ctx.SkillsRoot = "testdata/skills"
+	ctx.SkillsRoot = "testdata/integrations/claude"
 
 	installed := filepath.Join(ctx.Home, ".claude", "skills")
 	if err := os.MkdirAll(filepath.Join(installed, "alpha"), 0o755); err != nil {

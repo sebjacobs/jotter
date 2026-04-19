@@ -47,7 +47,7 @@ func TestWizardIsNoOpOnHealthyInstall(t *testing.T) {
 	// Skills already installed — copy the embedded test fixture into place
 	// so the skills step finds a byte-for-byte match.
 	ctx.SkillsFS = testSkillsFS
-	ctx.SkillsRoot = "testdata/skills"
+	ctx.SkillsRoot = "testdata/integrations/claude"
 	for _, skill := range []string{"alpha", "beta"} {
 		dest := filepath.Join(ctx.Home, ".claude", "skills", skill)
 		if err := os.MkdirAll(dest, 0o755); err != nil {
@@ -56,7 +56,7 @@ func TestWizardIsNoOpOnHealthyInstall(t *testing.T) {
 	}
 	// Populate with the same bytes the embed has.
 	copySkillFile := func(name string) {
-		src, err := testSkillsFS.ReadFile("testdata/skills/" + name + "/SKILL.md")
+		src, err := testSkillsFS.ReadFile("testdata/integrations/claude/" + name + "/SKILL.md")
 		if err != nil {
 			t.Fatal(err)
 		}
