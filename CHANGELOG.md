@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.4.0] — 2026-04-19
+
+### Changed
+- `jotter setup`'s skills step now prompts before overwriting an existing `~/.claude/skills/<name>/SKILL.md` whose content differs from the bundled template. Previously the step overwrote local edits silently on every re-run, clobbering any customisation. Default is No, mirroring the pattern already used for `.jotter`. Byte-identical re-runs and fresh installs behave exactly as before. The summary line now reports `installed / updated / kept` so the outcome is explicit.
+- Bundled template session skills (`start-session`, `save-session`, `finish-session`, `break-session`) trimmed back to their jotter-specific behaviour — determining project/branch, calling `tail` / `ls` / `write` with the right `--type` and fields, surfacing the `**Next:**` handover. Session-management conventions that had accumulated in the templates (7PM cutoff language, cron pacing rules, ROADMAP.md / DONE.md workflow, `gh pr list` TODO updates, commit-grouping proposals) have been removed — these belong in personal customisation, not the tool's bundled defaults. 406 → 270 lines total. `recover-session` was already jotter-focused and is essentially unchanged.
+
 ## [v0.3.2] — 2026-04-18
 
 ### Added
