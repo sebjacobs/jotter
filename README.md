@@ -8,6 +8,16 @@ Append-only session log tool for [Claude Code](https://docs.anthropic.com/en/doc
 
 ## Install
 
+### Homebrew (macOS and Linux)
+
+```bash
+brew install sebjacobs/tap/jotter
+```
+
+Upgrades come with `brew upgrade jotter`. The tap lives at [github.com/sebjacobs/homebrew-tap](https://github.com/sebjacobs/homebrew-tap) and the cask is updated automatically on every release.
+
+### Install script
+
 ```bash
 curl -fsSL https://raw.githubusercontent.com/sebjacobs/jotter/main/install.sh | sh
 ```
@@ -16,7 +26,7 @@ Downloads the latest prebuilt binary for your platform (macOS arm64/amd64, Linux
 
 If `$HOME/.local/bin` isn't already on your `PATH`, the script prints the `export` line you need.
 
-### Alternative: `go install`
+### `go install`
 
 If you have a Go toolchain and prefer source builds (or you're on an unsupported platform like Windows):
 

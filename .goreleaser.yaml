@@ -45,3 +45,32 @@ release:
 
 snapshot:
   version_template: "{{ incpatch .Version }}-snapshot"
+
+homebrew_casks:
+  - name: jotter
+    binaries: [jotter]
+    repository:
+      owner: sebjacobs
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: "https://github.com/sebjacobs/jotter"
+    description: "Append-only session log tool for Claude Code sessions"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "jotter: bump to {{ .Tag }}"
+    generate_completions_from_executable:
+      executable: "jotter"
+      args:
+        - completion
+      base_name: "jotter"
+      shell_parameter_format: cobra
+      shells:
+        - bash
+        - zsh
+        - fish
+    caveats: |
+      Run `jotter setup` once to wire jotter into Claude Code —
+      it configures the data dir, installs the session skills, and
+      grants the Bash(jotter:*) permission.
