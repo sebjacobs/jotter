@@ -67,6 +67,16 @@ Today jotter writes JSONL files directly and commits them to a git-backed data d
 
 **When to actually do it:** only once a concrete second backend is committed to. Extracting an interface with one implementation tends to encode the current impl's shape (per-write git commits, branch-name sanitisation as a filename concern) rather than a genuinely portable contract.
 
+### Auto-detect `--project` / `--branch` on `write`, `tail`, `ls`
+
+Today `write`, `tail`, and `ls` all require `--project` and `--branch` flags. The v0.5.0 `jotter project` / `jotter branch` helper commands took one step toward fixing this — skills now call them rather than boilerplating `git rev-parse` — but every skill still passes the resolved values explicitly on every call.
+
+**Target shape:** `--project` and `--branch` become optional. When unset on `write` / `tail` / `ls`, jotter auto-detects from cwd (same logic as the `project` / `branch` subcommands: basename of git toplevel; current branch; error on detached HEAD or outside a repo). Explicit flags still win for cross-project writes and scripted flows.
+
+**Trade-off:** more magic, less typing. The current explicit shape was chosen deliberately in v0.5.0 — callers see exactly what values are being passed. The auto-detect form has no such visibility; a `jotter write --type finish --content "…"` run from the wrong directory would silently write to a different project/branch than intended.
+
+**When to revisit:** if skill templates keep accumulating `$(jotter project)` / `$(jotter branch)` boilerplate and the "surprise a user could write to the wrong place" risk feels overstated in practice. Would likely collapse another 20–30 lines of template bash.
+
 ### Multi-agent support
 
 Generalise `jotter setup` beyond Claude Code to Codex, Aider, Cursor. Detect which agents are installed, offer to wire each one up with the equivalent of skills/permissions for that agent. Structured as a plugin per agent so adding a new one is additive.

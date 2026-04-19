@@ -16,14 +16,14 @@ Reconstructs what happened in a session that ended without `/finish` — reads C
 Determine the project name and branch:
 
 ```bash
-basename "$(git rev-parse --show-toplevel)"
-git rev-parse --abbrev-ref HEAD
+PROJECT=$(jotter project)
+BRANCH=$(jotter branch)
 ```
 
 Check the last session log entry:
 
 ```bash
-jotter tail --project <project> --branch <branch> --limit 1
+jotter tail --project "$PROJECT" --branch "$BRANCH" --limit 1
 ```
 
 If the last entry is a `finish`, the session ended cleanly — nothing to recover. Tell the user and stop.
@@ -85,8 +85,8 @@ From the extracted conversation, synthesise a recovery entry:
 
 ```bash
 jotter write \
-  --project <project> \
-  --branch <branch> \
+  --project "$PROJECT" \
+  --branch "$BRANCH" \
   --type finish \
   --content "<what was built/fixed, key decisions, where things stopped>" \
   --next "<priorities inferred from the session trajectory>"

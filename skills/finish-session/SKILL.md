@@ -16,8 +16,8 @@ Writes a `finish` entry to the jotter log — the session summary plus a `--next
 ### 1 — Determine project and branch
 
 ```bash
-basename "$(git rev-parse --show-toplevel)"
-git rev-parse --abbrev-ref HEAD
+PROJECT=$(jotter project)
+BRANCH=$(jotter branch)
 ```
 
 ### 2 — Write the finish entry
@@ -26,8 +26,8 @@ Summarise the session — what was built or fixed, key decisions, gotchas or deb
 
 ```bash
 jotter write \
-  --project <project> \
-  --branch <branch> \
+  --project "$PROJECT" \
+  --branch "$BRANCH" \
   --type finish \
   --content "<session summary: what shipped, decisions made, gotchas>" \
   --next "<top priorities for next session, in order>"

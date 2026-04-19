@@ -14,14 +14,14 @@ Writes a `checkpoint` entry to the jotter log — a snapshot of current progress
 ### 1 — Determine project and branch
 
 ```bash
-basename "$(git rev-parse --show-toplevel)"
-git rev-parse --abbrev-ref HEAD
+PROJECT=$(jotter project)
+BRANCH=$(jotter branch)
 ```
 
 ### 2 — Read recent context (avoid duplication)
 
 ```bash
-jotter tail --project <project> --branch <branch> --limit 3
+jotter tail --project "$PROJECT" --branch "$BRANCH" --limit 3
 ```
 
 Review what's already been captured so the checkpoint adds new information rather than repeating earlier entries.
@@ -30,8 +30,8 @@ Review what's already been captured so the checkpoint adds new information rathe
 
 ```bash
 jotter write \
-  --project <project> \
-  --branch <branch> \
+  --project "$PROJECT" \
+  --branch "$BRANCH" \
   --type checkpoint \
   --content "<progress since last entry, decisions made, current state>" \
   --next "<what you're about to do next>"

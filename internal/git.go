@@ -4,7 +4,37 @@ import (
 	"bytes"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"strings"
 )
+
+// GitProjectName returns the basename of the git toplevel for cwd.
+// Returns an error if cwd is not inside a git repo.
+func GitProjectName(cwd string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd.Dir = cwd
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("not inside a git repo (run from inside one, or pass --project explicitly)")
+	}
+	return filepath.Base(strings.TrimSpace(string(out))), nil
+}
+
+// GitCurrentBranch returns the current branch name for cwd.
+// Returns an error if cwd is not inside a git repo, or if HEAD is detached.
+func GitCurrentBranch(cwd string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
+	cmd.Dir = cwd
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("not inside a git repo (run from inside one, or pass --branch explicitly)")
+	}
+	branch := strings.TrimSpace(string(out))
+	if branch == "HEAD" {
+		return "", fmt.Errorf("detached HEAD — pass --branch explicitly")
+	}
+	return branch, nil
+}
 
 // GitCommit stages a file and commits it in the data repo.
 func GitCommit(dataDir, filePath, message string) error {

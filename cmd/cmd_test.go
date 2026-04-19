@@ -690,3 +690,121 @@ func TestSearch_NoResults(t *testing.T) {
 		t.Error("expected non-zero exit code for no results")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// project / branch commands
+// ---------------------------------------------------------------------------
+
+// runJotterFromGitRepo runs jotter from a fresh git-initialised workdir. Lets
+// us exercise project/branch detection without the real user's git state.
+// Returns (stdout, stderr, exitCode, workdir).
+func runJotterFromGitRepo(t *testing.T, branch string, args ...string) (string, string, int, string) {
+	t.Helper()
+	workdir := t.TempDir()
+	for _, cmdArgs := range [][]string{
+		{"git", "init", "-b", branch},
+		{"git", "config", "user.email", "test@test.com"},
+		{"git", "config", "user.name", "Test"},
+		{"git", "commit", "--allow-empty", "-m", "init"},
+	} {
+		c := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		c.Dir = workdir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("%v failed: %s", cmdArgs, out)
+		}
+	}
+	cleanHome := t.TempDir()
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = workdir
+	cmd.Env = append(os.Environ(), "HOME="+cleanHome)
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			t.Fatalf("failed to run jotter: %v", err)
+		}
+	}
+	return stdout.String(), stderr.String(), exitCode, workdir
+}
+
+func TestProject_PrintsBasenameOfGitToplevel(t *testing.T) {
+	stdout, _, code, workdir := runJotterFromGitRepo(t, "main", "project")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s", code, stdout)
+	}
+	want := filepath.Base(workdir)
+	if got := strings.TrimSpace(stdout); got != want {
+		t.Errorf("project = %q, want %q", got, want)
+	}
+}
+
+func TestProject_ErrorsOutsideGitRepo(t *testing.T) {
+	// Use the non-git runJotter helper so cwd is not a git repo.
+	dir := initDataDir(t)
+	_, stderr, code := runJotter(t, dir, "project")
+	if code == 0 {
+		t.Error("expected non-zero exit code outside a git repo")
+	}
+	if !strings.Contains(stderr, "not inside a git repo") {
+		t.Errorf("stderr missing expected message: %s", stderr)
+	}
+}
+
+func TestBranch_PrintsCurrentBranch(t *testing.T) {
+	stdout, _, code, _ := runJotterFromGitRepo(t, "feature/test-branch", "branch")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s", code, stdout)
+	}
+	if got := strings.TrimSpace(stdout); got != "feature/test-branch" {
+		t.Errorf("branch = %q, want feature/test-branch", got)
+	}
+}
+
+func TestBranch_ErrorsOnDetachedHEAD(t *testing.T) {
+	workdir := t.TempDir()
+	for _, cmdArgs := range [][]string{
+		{"git", "init", "-b", "main"},
+		{"git", "config", "user.email", "test@test.com"},
+		{"git", "config", "user.name", "Test"},
+		{"git", "commit", "--allow-empty", "-m", "one"},
+		{"git", "commit", "--allow-empty", "-m", "two"},
+	} {
+		c := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		c.Dir = workdir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("%v failed: %s", cmdArgs, out)
+		}
+	}
+	// Detach HEAD by checking out the previous commit's SHA.
+	c := exec.Command("git", "rev-parse", "HEAD~1")
+	c.Dir = workdir
+	sha, err := c.Output()
+	if err != nil {
+		t.Fatalf("rev-parse: %v", err)
+	}
+	c = exec.Command("git", "checkout", strings.TrimSpace(string(sha)))
+	c.Dir = workdir
+	if out, err := c.CombinedOutput(); err != nil {
+		t.Fatalf("checkout detached: %s", out)
+	}
+
+	cleanHome := t.TempDir()
+	cmd := exec.Command(binaryPath, "branch")
+	cmd.Dir = workdir
+	cmd.Env = append(os.Environ(), "HOME="+cleanHome)
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	runErr := cmd.Run()
+	exitErr, ok := runErr.(*exec.ExitError)
+	if !ok || exitErr.ExitCode() == 0 {
+		t.Fatalf("expected non-zero exit on detached HEAD, stderr: %s", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "detached HEAD") {
+		t.Errorf("stderr missing expected message: %s", stderr.String())
+	}
+}

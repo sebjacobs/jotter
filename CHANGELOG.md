@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `jotter project` and `jotter branch` — two tiny helper subcommands that print the current project name (basename of the git toplevel) and current branch. Intended for use in skill templates and scripts that previously boilerplated `basename "$(git rev-parse --show-toplevel)"` and `git rev-parse --abbrev-ref HEAD` everywhere. Error out cleanly outside a git repo or on detached HEAD (for `branch`). `write` / `tail` / `ls` still require explicit `--project` / `--branch` flags — no behavioural magic on the hot path; see ROADMAP.md for the auto-detect alternative.
+
+### Changed
+- Bundled template session skills (`start-session`, `save-session`, `finish-session`, `break-session`, `recover-session`) now call `$(jotter project)` and `$(jotter branch)` instead of shelling out to raw git plumbing. Fewer lines, one mental model across all five skills.
+
 ## [v0.4.0] — 2026-04-19
 
 ### Changed
