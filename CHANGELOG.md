@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.0] — 2026-04-19
+
+### Added
+- `jotter ls --since` / `--until` — filter the project, branch, or entry list to a date/timestamp window. Mirrors the flags just added to `jotter search` in v0.6.0: same formats (`YYYY-MM-DD` or `YYYY-MM-DDTHH:MM:SS`), same inclusive semantics on both ends. Makes "which projects did I touch on date X?" a one-liner (`jotter ls --since X --until X`). `last:` timestamps and entry counts reflect the in-window slice so the display stays internally consistent — no overall-last timestamps leaking into a filtered view.
+
+### Changed
+- Extracted `parseBoundary` / `parseWindow` / `inWindow` into `cmd/boundary.go` so `ls` and `search` share one parser. Pure refactor — behavioural parity with v0.6.0.
+
 ## [v0.6.0] — 2026-04-19
 
 ### Added
@@ -81,7 +89,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.7.0...HEAD
+[v0.7.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.0
 [v0.6.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.6.0
 [v0.5.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.5.0
 [v0.4.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.4.0
