@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.6.0] — 2026-04-19
+
+### Added
+- `jotter search --until` — new upper-bound flag that pairs with the existing `--since` to scope results to a date range. When both bounds match (`--since X --until X`), every entry from that single day is returned — the common case when reviewing one session's log. Both `--since` and `--until` also accept full `YYYY-MM-DDTHH:MM:SS` timestamps, so windows can be as tight as needed (e.g. isolating a single morning). Date values remain inclusive on both ends so there's no half-open interval to reason about.
+
 ## [v0.5.0] — 2026-04-19
 
 ### Added
@@ -76,7 +81,10 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.6.0...HEAD
+[v0.6.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.6.0
+[v0.5.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.5.0
+[v0.4.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.4.0
 [v0.3.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.2
 [v0.3.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.1
 [v0.3.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.3.0
