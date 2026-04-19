@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.5.0] — 2026-04-19
+
 ### Added
 - `jotter project` and `jotter branch` — two tiny helper subcommands that print the current project name (basename of the git toplevel) and current branch. Intended for use in skill templates and scripts that previously boilerplated `basename "$(git rev-parse --show-toplevel)"` and `git rev-parse --abbrev-ref HEAD` everywhere. Error out cleanly outside a git repo or on detached HEAD (for `branch`). `write` / `tail` / `ls` still require explicit `--project` / `--branch` flags — no behavioural magic on the hot path; see ROADMAP.md for the auto-detect alternative.
 
