@@ -14,16 +14,16 @@ Writes a `break` entry to the jotter log — a snapshot of current state and wha
 ### 1 — Determine project and branch
 
 ```bash
-basename "$(git rev-parse --show-toplevel)"
-git rev-parse --abbrev-ref HEAD
+PROJECT=$(jotter project)
+BRANCH=$(jotter branch)
 ```
 
 ### 2 — Write the break entry
 
 ```bash
 jotter write \
-  --project <project> \
-  --branch <branch> \
+  --project "$PROJECT" \
+  --branch "$BRANCH" \
   --type break \
   --content "<what's been done, current state, anything half-finished>" \
   --next "<what to pick up on return>"
