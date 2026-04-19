@@ -21,7 +21,8 @@ var searchCmd = &cobra.Command{
 func init() {
 	searchCmd.Flags().String("project", "", "Scope to this project")
 	searchCmd.Flags().String("branch", "", "Scope to this branch")
-	searchCmd.Flags().String("since", "", "Filter entries from this date (YYYY-MM-DD)")
+	searchCmd.Flags().String("since", "", "Filter entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
+	searchCmd.Flags().String("until", "", "Filter entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("type", "", "Filter by entry type")
 	_ = searchCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = searchCmd.RegisterFlagCompletionFunc("branch", completeBranches)
@@ -33,6 +34,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	project, _ := cmd.Flags().GetString("project")
 	branch, _ := cmd.Flags().GetString("branch")
 	since, _ := cmd.Flags().GetString("since")
+	until, _ := cmd.Flags().GetString("until")
 	entryType, _ := cmd.Flags().GetString("type")
 
 	var term string
@@ -57,10 +59,22 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	var sinceTime time.Time
 	if since != "" {
-		sinceTime, err = time.Parse(internal.DateFormat, since)
+		sinceTime, err = parseBoundary(since, false)
 		if err != nil {
-			return fmt.Errorf("invalid --since date: %w", err)
+			return fmt.Errorf("invalid --since value: %w", err)
 		}
+	}
+
+	var untilTime time.Time
+	if until != "" {
+		untilTime, err = parseBoundary(until, true)
+		if err != nil {
+			return fmt.Errorf("invalid --until value: %w", err)
+		}
+	}
+
+	if !sinceTime.IsZero() && !untilTime.IsZero() && untilTime.Before(sinceTime) {
+		return fmt.Errorf("--until must not be earlier than --since")
 	}
 
 	var results []string
@@ -73,9 +87,12 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		rel, _ := filepath.Rel(logsDir, path)
 
 		for _, entry := range entries {
-			if !sinceTime.IsZero() {
+			if !sinceTime.IsZero() || !untilTime.IsZero() {
 				entryTime, _ := time.Parse(internal.TimestampFormat, entry.Timestamp)
-				if entryTime.Before(sinceTime) {
+				if !sinceTime.IsZero() && entryTime.Before(sinceTime) {
+					continue
+				}
+				if !untilTime.IsZero() && entryTime.After(untilTime) {
 					continue
 				}
 			}
@@ -105,4 +122,21 @@ func runSearch(cmd *cobra.Command, args []string) error {
 
 	fmt.Println(strings.Join(results, "\n\n"))
 	return nil
+}
+
+// parseBoundary parses either a date (YYYY-MM-DD) or full timestamp
+// (YYYY-MM-DDTHH:MM:SS). For date-only values, endOfDay=true promotes
+// the result to 23:59:59 so --until <date> is inclusive of that day.
+func parseBoundary(s string, endOfDay bool) (time.Time, error) {
+	if t, err := time.Parse(internal.TimestampFormat, s); err == nil {
+		return t, nil
+	}
+	t, err := time.Parse(internal.DateFormat, s)
+	if err != nil {
+		return time.Time{}, fmt.Errorf("expected YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, got %q", s)
+	}
+	if endOfDay {
+		t = t.Add(24*time.Hour - time.Second)
+	}
+	return t, nil
 }
