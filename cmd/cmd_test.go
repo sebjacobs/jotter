@@ -526,6 +526,125 @@ func TestLs_UnknownProjectExitsWithError(t *testing.T) {
 	}
 }
 
+// writeRawJSONL drops pre-formed JSONL lines into logs/<project>/<branch>.jsonl
+// so tests can pin entry timestamps to exact values.
+func writeRawJSONL(t *testing.T, dir, project, branch string, lines ...string) {
+	t.Helper()
+	projectDir := filepath.Join(dir, "logs", project)
+	if err := os.MkdirAll(projectDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(projectDir, branch+".jsonl")
+	body := strings.Join(lines, "\n") + "\n"
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLs_ProjectsFilteredByWindow(t *testing.T) {
+	dir := initDataDir(t)
+	writeRawJSONL(t, dir, "proj-a", "main",
+		`{"timestamp":"2026-04-10T09:00:00","type":"start","content":"A work"}`,
+		`{"timestamp":"2026-04-19T15:00:00","type":"checkpoint","content":"A recent"}`,
+	)
+	writeRawJSONL(t, dir, "proj-b", "main",
+		`{"timestamp":"2026-01-05T10:00:00","type":"start","content":"B old only"}`,
+	)
+	writeRawJSONL(t, dir, "proj-c", "main",
+		`{"timestamp":"2026-04-19T20:00:00","type":"finish","content":"C recent only"}`,
+	)
+
+	stdout, _, code := runJotter(t, dir, "ls",
+		"--since", "2026-04-19", "--until", "2026-04-19")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stdout)
+	}
+	if !strings.Contains(stdout, "proj-a") {
+		t.Errorf("proj-a should be listed (has in-window entry): %s", stdout)
+	}
+	if !strings.Contains(stdout, "proj-c") {
+		t.Errorf("proj-c should be listed: %s", stdout)
+	}
+	if strings.Contains(stdout, "proj-b") {
+		t.Errorf("proj-b should be filtered out (no in-window entries): %s", stdout)
+	}
+	// last: should reflect the in-window timestamp, not the overall last.
+	if !strings.Contains(stdout, "2026-04-19 15:00") {
+		t.Errorf("proj-a last: should be in-window (15:00), got: %s", stdout)
+	}
+}
+
+func TestLs_BranchesFilteredByWindow(t *testing.T) {
+	dir := initDataDir(t)
+	writeRawJSONL(t, dir, "proj", "main",
+		`{"timestamp":"2026-04-19T10:00:00","type":"start","content":"main in window"}`,
+	)
+	writeRawJSONL(t, dir, "proj", "old-feature",
+		`{"timestamp":"2026-01-01T10:00:00","type":"start","content":"too old"}`,
+	)
+
+	stdout, _, code := runJotter(t, dir, "ls",
+		"--project", "proj", "--since", "2026-04-19")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stdout)
+	}
+	if !strings.Contains(stdout, "main") {
+		t.Errorf("main branch should be listed: %s", stdout)
+	}
+	if strings.Contains(stdout, "old-feature") {
+		t.Errorf("old-feature should be filtered out: %s", stdout)
+	}
+}
+
+func TestLs_EntriesFilteredByWindow(t *testing.T) {
+	dir := initDataDir(t)
+	writeRawJSONL(t, dir, "proj", "main",
+		`{"timestamp":"2026-04-10T09:00:00","type":"start","content":"Old morning"}`,
+		`{"timestamp":"2026-04-19T12:00:00","type":"checkpoint","content":"Target noon"}`,
+		`{"timestamp":"2026-04-19T18:00:00","type":"finish","content":"Target evening"}`,
+	)
+
+	stdout, _, code := runJotter(t, dir, "ls",
+		"--project", "proj", "--branch", "main",
+		"--since", "2026-04-19T13:00:00",
+		"--until", "2026-04-19T23:59:59")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stdout)
+	}
+	if !strings.Contains(stdout, "Target evening") {
+		t.Errorf("missing target evening entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "Old morning") || strings.Contains(stdout, "Target noon") {
+		t.Errorf("should only contain the evening entry: %s", stdout)
+	}
+}
+
+func TestLs_EmptyWindowExitsWithError(t *testing.T) {
+	dir := initDataDir(t)
+	writeRawJSONL(t, dir, "proj", "main",
+		`{"timestamp":"2026-01-01T10:00:00","type":"start","content":"ancient"}`,
+	)
+
+	_, stderr, code := runJotter(t, dir, "ls", "--since", "2026-04-19")
+	if code == 0 {
+		t.Error("expected non-zero exit code for empty window")
+	}
+	if !strings.Contains(stderr, "in window") {
+		t.Errorf("expected error mentioning window: %s", stderr)
+	}
+}
+
+func TestLs_InvalidBoundary(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code := runJotter(t, dir, "ls", "--since", "yesterday")
+	if code == 0 {
+		t.Error("expected non-zero exit code for invalid --since")
+	}
+	if !strings.Contains(stderr, "invalid --since") {
+		t.Errorf("missing error message: %s", stderr)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // search command
 // ---------------------------------------------------------------------------

@@ -21,6 +21,8 @@ var lsCmd = &cobra.Command{
 func init() {
 	lsCmd.Flags().String("project", "", "List branches for this project")
 	lsCmd.Flags().String("branch", "", "List entries for this branch (requires --project)")
+	lsCmd.Flags().String("since", "", "Only include entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
+	lsCmd.Flags().String("until", "", "Only include entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	_ = lsCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = lsCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(lsCmd)
@@ -42,11 +44,19 @@ type projectInfo struct {
 func runLs(cmd *cobra.Command, args []string) error {
 	project, _ := cmd.Flags().GetString("project")
 	branch, _ := cmd.Flags().GetString("branch")
+	since, _ := cmd.Flags().GetString("since")
+	until, _ := cmd.Flags().GetString("until")
 
 	if branch != "" && project == "" {
 		fmt.Fprintln(os.Stderr, "--branch requires --project")
 		os.Exit(1)
 	}
+
+	sinceTime, untilTime, err := parseWindow(since, until)
+	if err != nil {
+		return err
+	}
+	windowActive := !sinceTime.IsZero() || !untilTime.IsZero()
 
 	dataDir, err := internal.GetDataDir()
 	if err != nil {
@@ -60,15 +70,15 @@ func runLs(cmd *cobra.Command, args []string) error {
 	}
 
 	if branch != "" {
-		return lsEntries(dataDir, project, branch)
+		return lsEntries(dataDir, project, branch, sinceTime, untilTime, windowActive)
 	}
 	if project != "" {
-		return lsBranches(logsDir, project)
+		return lsBranches(logsDir, project, sinceTime, untilTime, windowActive)
 	}
-	return lsProjects(logsDir)
+	return lsProjects(logsDir, sinceTime, untilTime, windowActive)
 }
 
-func lsEntries(dataDir, project, branch string) error {
+func lsEntries(dataDir, project, branch string, since, until time.Time, windowActive bool) error {
 	path, err := internal.JSONLPath(dataDir, project, branch)
 	if err != nil {
 		return err
@@ -86,11 +96,24 @@ func lsEntries(dataDir, project, branch string) error {
 		os.Exit(1)
 	}
 
+	printed := 0
 	for i := len(entries) - 1; i >= 0; i-- {
 		e := entries[i]
+		if !inWindow(e.Timestamp, since, until) {
+			continue
+		}
 		t, _ := time.Parse(internal.TimestampFormat, e.Timestamp)
 		ts := t.Format("2006-01-02 15:04")
 		fmt.Printf("%s  %-10s  %s\n", internal.Dim(ts), internal.ColorType(e.Type), entryTitle(e.Content))
+		printed++
+	}
+	if printed == 0 {
+		if windowActive {
+			fmt.Fprintf(os.Stderr, "No entries for %s/%s in window\n", project, branch)
+		} else {
+			fmt.Fprintf(os.Stderr, "No entries for %s/%s\n", project, branch)
+		}
+		os.Exit(1)
 	}
 	return nil
 }
@@ -118,7 +141,7 @@ func entryTitle(content string) string {
 	return ""
 }
 
-func lsBranches(logsDir, project string) error {
+func lsBranches(logsDir, project string, since, until time.Time, windowActive bool) error {
 	projectDir := filepath.Join(logsDir, project)
 	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "No logs for project %s\n", project)
@@ -133,14 +156,16 @@ func lsBranches(logsDir, project string) error {
 		if err != nil {
 			continue
 		}
-		bi := branchInfo{name: name}
-		if len(entries) > 0 {
-			bi.count = len(entries)
-			bi.lastTS = entries[len(entries)-1].Timestamp
-			t, _ := time.Parse(internal.TimestampFormat, bi.lastTS)
-			bi.lastDate = t.Format("2006-01-02 15:04")
+		bi := branchInfoFromEntries(name, entries, since, until)
+		if windowActive && bi.count == 0 {
+			continue
 		}
 		branches = append(branches, bi)
+	}
+
+	if windowActive && len(branches) == 0 {
+		fmt.Fprintf(os.Stderr, "No branches for project %s in window\n", project)
+		os.Exit(1)
 	}
 
 	slices.SortFunc(branches, func(a, b branchInfo) int {
@@ -157,7 +182,23 @@ func lsBranches(logsDir, project string) error {
 	return nil
 }
 
-func lsProjects(logsDir string) error {
+func branchInfoFromEntries(name string, entries []internal.Entry, since, until time.Time) branchInfo {
+	bi := branchInfo{name: name}
+	for _, e := range entries {
+		if !inWindow(e.Timestamp, since, until) {
+			continue
+		}
+		bi.count++
+		if e.Timestamp > bi.lastTS {
+			bi.lastTS = e.Timestamp
+			t, _ := time.Parse(internal.TimestampFormat, bi.lastTS)
+			bi.lastDate = t.Format("2006-01-02 15:04")
+		}
+	}
+	return bi
+}
+
+func lsProjects(logsDir string, since, until time.Time, windowActive bool) error {
 	entries, err := os.ReadDir(logsDir)
 	if err != nil {
 		return err
@@ -172,21 +213,32 @@ func lsProjects(logsDir string) error {
 		pi := projectInfo{name: entry.Name()}
 		for _, path := range matches {
 			logEntries, err := internal.ReadEntries(path)
-			if err != nil || len(logEntries) == 0 {
+			if err != nil {
 				continue
 			}
-			ts := logEntries[len(logEntries)-1].Timestamp
-			if ts > pi.lastTS {
-				pi.lastTS = ts
-				t, _ := time.Parse(internal.TimestampFormat, ts)
-				pi.lastDate = t.Format("2006-01-02 15:04")
+			for _, e := range logEntries {
+				if !inWindow(e.Timestamp, since, until) {
+					continue
+				}
+				if e.Timestamp > pi.lastTS {
+					pi.lastTS = e.Timestamp
+					t, _ := time.Parse(internal.TimestampFormat, e.Timestamp)
+					pi.lastDate = t.Format("2006-01-02 15:04")
+				}
 			}
+		}
+		if windowActive && pi.lastTS == "" {
+			continue
 		}
 		projects = append(projects, pi)
 	}
 
 	if len(projects) == 0 {
-		fmt.Fprintln(os.Stderr, "No projects found")
+		if windowActive {
+			fmt.Fprintln(os.Stderr, "No projects with entries in window")
+		} else {
+			fmt.Fprintln(os.Stderr, "No projects found")
+		}
 		os.Exit(1)
 	}
 
