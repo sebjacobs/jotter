@@ -4,6 +4,12 @@ Living document — Now / Next / Later priorities for jotter.
 
 ## Now
 
+### Rotate `HOMEBREW_TAP_GITHUB_TOKEN`
+
+Homebrew cask update has failed on both v0.6.0 and v0.7.0 release runs with `403 Resource not accessible by personal access token` on `PUT .../sebjacobs/homebrew-tap/contents/Casks/jotter.rb`. The main GitHub Release publishes fine; only the tap step fails. As a result, `sebjacobs/homebrew-tap/Casks/jotter.rb` is still pinned at v0.5.0 — two versions behind.
+
+**Fix:** issue a fresh fine-grained GitHub PAT (scope: `contents: write` on `sebjacobs/homebrew-tap` only, no other perms) and set it as `HOMEBREW_TAP_GITHUB_TOKEN` under Settings → Secrets and variables → Actions on `sebjacobs/jotter`. Then either re-run the v0.7.0 release workflow (`gh run rerun`) or cut a v0.7.1 patch — both will push the cask forward.
+
 ### Relative timestamps in `jotter ls` (PR #10, draft)
 
 Show human-friendly relative times ("2h ago", "yesterday") in `jotter ls` output. Branch `feature/ls-relative-timestamps` is rebased onto main and green; ready to move out of draft once the UX is confirmed.
@@ -85,6 +91,8 @@ Generalise `jotter setup` beyond Claude Code to Codex, Aider, Cursor. Detect whi
 
 ## Shipped
 
+- **`jotter ls --since` / `--until`** (v0.7.0, PR #24 merged 6877e56) — filter the project/branch/entry list to a date or timestamp window, mirroring the flags on `search`. `last:` timestamps and counts reflect the in-window slice so the display stays internally consistent. Factored `parseBoundary` / `parseWindow` / `inWindow` into `cmd/boundary.go` as a shared helper in a standalone refactor commit.
+- **`jotter search --until` + timestamp support** (v0.6.0, PR #23 merged 2c5d3b5) — new `--until` flag paired with `--since`; both now accept `YYYY-MM-DD` (inclusive on both ends) or `YYYY-MM-DDTHH:MM:SS` (exact). Single-day queries and arbitrary windows work from one flag pair.
 - **`justfile` + CI lint fix** (v0.2.2, PR #12 merged d2a8519) — errcheck failures on `fmt.Fprint*` in setup wizard cleared; new `justfile` with `just check` running build + test + lint locally, mirroring CI. `README.md` and `CLAUDE.md` point at it as the canonical pre-push command.
 - **Skip git push when data repo has no remote** (v0.2.1, PR #11 merged ad50d1b) — `finish` entries now probe for a remote via `GitHasRemote` before pushing, eliminating the `Warning: git push failed:` noise on local-only data repos. Real push failures against configured remotes still warn.
 - **`jotter setup` interactive wizard** (v0.2.0, merged b880730) — seven-step wizard for Claude Code onboarding; embedded session-management skills via `//go:embed`; idempotent, always-prompt-with-current-values, accept-default is a genuine no-op.
