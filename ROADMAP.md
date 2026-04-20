@@ -4,6 +4,24 @@ Living document — Now / Next / Later priorities for jotter.
 
 ## Now
 
+### Sign + notarise macOS binaries (or drop the cask before Sept 2026)
+
+`brew install --cask jotter` lands the binary with `com.apple.quarantine` set, so first run trips Gatekeeper: *"Apple could not verify 'jotter' is free of malware"*. Homebrew applies the xattr deliberately ([cask/quarantine.rb](https://github.com/Homebrew/brew/blob/master/Library/Homebrew/cask/quarantine.rb) — the `cask!` method) to mimic Safari and force Gatekeeper checks; formula downloads via curl never get the bit set in the first place, which is why formulae "just work" and casks don't.
+
+The escape hatch is closed: `--no-quarantine` is deprecated with **no replacement** (Homebrew doesn't want to provide a Gatekeeper bypass). Hard deadline: **September 2026** — Homebrew will disable every cask in the official `homebrew-cask` tap that fails Gatekeeper. Jotter's cask is on `sebjacobs/homebrew-tap` (personal), so the disablement doesn't auto-remove it, but every install hits the prompt and the ecosystem direction is unambiguous.
+
+**Three real options:**
+
+1. **Sign + notarise** — Apple Developer Program ($99/yr), Developer ID Application cert, `notarytool` step in `.github/workflows/release.yml`, two new repo secrets (`AC_USERNAME`, `AC_PASSWORD` app-specific). GoReleaser's `signs:` block handles the wiring. Right answer for staying in the cask ecosystem long-term — satisfies Gatekeeper rather than fighting it.
+2. **Cask `postflight` xattr strip** — `postflight do system_command "/usr/bin/xattr", args: ["-d", "com.apple.quarantine", "#{staged_path}/jotter"], sudo: false end` in the GoReleaser cask template. Mechanically works because we control the tap, but deliberately fights Homebrew's direction; likely to warn or break in a future brew release.
+3. **Drop the cask, lead with `install.sh`** — `curl | sh` uses CLI curl, which doesn't set the quarantine bit, so the binary lands clean. Honest about the constraint, no fight with brew. Loses `brew install` UX.
+
+**Recommendation:** notarise if the cask is the install path; otherwise drop the cask and lead with `install.sh`. The xattr workaround is the worst of the three — extra moving parts working against the platform's grain.
+
+**Open question:** is $99/yr + notarisation toolchain worth it for a personal-scale tool, vs cutting the cask and shipping a clean install.sh-only flow? Probably depends on whether anyone else is actually installing via brew.
+
+Sources: [Homebrew 5.0.0 release notes](https://brew.sh/2025/11/12/homebrew-5.0.0/), [Issue #20755](https://github.com/Homebrew/brew/issues/20755), [Discussion #6537](https://github.com/orgs/Homebrew/discussions/6537).
+
 ### Relative timestamps in `jotter ls` (PR #10, draft)
 
 Show human-friendly relative times ("2h ago", "yesterday") in `jotter ls` output. Branch `feature/ls-relative-timestamps` is rebased onto main and green; ready to move out of draft once the UX is confirmed.
