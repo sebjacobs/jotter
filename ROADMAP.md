@@ -32,6 +32,22 @@ Option 1 feels more aligned with "append-only JSONL is the source of truth" — 
 
 **Trade-offs:** the log branch decouples from the cwd branch — slightly more magic, but that's the point. Post-merge releases, branch cleanups, and worktree hops no longer fragment the session.
 
+### `jotter project` lifecycle subcommands (mv, rm, info, path)
+
+Project name today = `filepath.Base(git rev-parse --show-toplevel)` (`internal/git.go:13`). No config override, no remote fallback. Consequences: renaming a checkout directory silently orphans prior logs under the old name; two projects sharing a basename in different parents collide; `git branch -m` fragments branch-level history the same way one level down.
+
+**Target shape — MVP set:**
+- `jotter project mv <old> <new>` — `git mv logs/<old> logs/<new>` in the data repo + commit. Symmetric `jotter branch mv <old> <new> [--project P]` for the branch-rename case.
+- `jotter project rm <name>` — delete a project's logs with confirmation + git commit. Guard with `--force` / interactive confirm.
+- `jotter project info [name]` — branches, entry counts per branch, first/last dates, total size. Useful pre-`mv`/`rm`.
+- `jotter project path [name]` — prints `$JOTTER_DATA/logs/<name>`; scriptable (`cd "$(jotter project path)"`).
+
+**Paired config lever:** optional `project_name` field in `.jotter` TOML. Resolution precedence becomes flag → TOML → git-basename. Decouples project identity from directory name, incidentally fixes the basename-collision case. Compose: run `project mv` to relocate logs, drop a `project_name` in `.jotter` so future sessions keep resolving to the same name after a rename. Open question: should `project mv` auto-write the `.jotter` override when it detects cwd would now resolve differently? "Do the right thing" path but couples two features.
+
+**Skip for now:** `project ls` (overlaps with top-level `jotter ls`; revisit if metadata-summary need emerges), `project merge` (niche; wait for demand), `archive` / `export` / `open` (data-repo git history + shell already cover these).
+
+Worth a short spec in `docs/specs/project-lifecycle/` before building — decide `mv` auto-config behaviour and whether `info`/`path` take an optional positional or default to cwd-resolved.
+
 ### Tombstone / soft-delete for entries
 
 Entries are append-only today — no way to mark one as superseded or retract a mistake without rewriting history in the data repo (which breaks the append-only guarantee and any git-based replication).
