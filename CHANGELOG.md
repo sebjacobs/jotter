@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.1] — 2026-04-20
+
+### Fixed
+- Release-infrastructure patch. v0.7.0's release workflow uploaded assets successfully but failed at the Homebrew tap step with a `403` on `HOMEBREW_TAP_GITHUB_TOKEN`, leaving `sebjacobs/homebrew-tap/Casks/jotter.rb` pinned at v0.5.0. Re-running the v0.7.0 workflow hit `422 already_exists` on asset upload, so this patch version exists purely to re-trigger the release workflow with a rotated PAT and push the cask forward. No code changes.
+
 ## [v0.7.0] — 2026-04-19
 
 ### Added
@@ -89,7 +94,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.7.1...HEAD
+[v0.7.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.1
 [v0.7.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.0
 [v0.6.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.6.0
 [v0.5.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.5.0
