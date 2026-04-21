@@ -16,9 +16,15 @@ var banner string
 var skillsFS embed.FS
 
 var rootCmd = &cobra.Command{
-	Use:     "jotter",
-	Short:   "Append-only session log tool for Claude Code sessions",
-	Long:    strings.TrimRight(banner, "\n") + "\n\nAppend-only session log tool for Claude Code sessions.",
+	Use:   "jotter",
+	Short: "Append-only, git-backed log for Claude Code sessions",
+	Long: strings.TrimRight(banner, "\n") + "\n\n" +
+		"Jot it, keep it, find it later.\n\n" +
+		"An append-only log of your Claude Code sessions, stored as JSONL in a git repo " +
+		"outside your project tree. Entries are human-curated checkpoints — start, note, " +
+		"checkpoint, break, finish — committed one per write and pushed on finish. Use " +
+		"`tail` to replay a branch, `search` to grep across projects, and `ls` to browse " +
+		"what's been logged.",
 	Version: versionString(),
 }
 

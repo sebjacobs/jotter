@@ -56,7 +56,7 @@ homebrew_casks:
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Casks
     homepage: "https://github.com/sebjacobs/jotter"
-    description: "Append-only session log tool for Claude Code sessions"
+    description: "Append-only, git-backed log for Claude Code sessions"
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com

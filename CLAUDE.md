@@ -1,6 +1,6 @@
 # Jotter
 
-Append-only session log tool for Claude Code sessions. Go rewrite of the Python `session_logger.py`.
+Append-only, git-backed log for Claude Code sessions. Go rewrite of the Python `session_logger.py`.
 
 ## Build & test
 

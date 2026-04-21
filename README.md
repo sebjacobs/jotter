@@ -4,7 +4,9 @@
 
 # Jotter
 
-Append-only session log tool for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions. Stores structured JSONL entries in a git-backed data repository, one file per branch.
+> Jot it, keep it, find it later.
+
+An append-only, git-backed log for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) sessions. Stores structured JSONL entries in a git-backed data repository, one file per branch.
 
 ## Install
 
