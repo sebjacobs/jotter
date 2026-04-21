@@ -887,6 +887,76 @@ func TestSearch_NoResults(t *testing.T) {
 	}
 }
 
+func TestSearch_Limit(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, stderr, code := runJotter(t, dir, "search", "--limit", "2")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stderr)
+	}
+	// populateSearchData writes 4 entries; limit=2 should only show first two
+	if strings.Count(stdout, "\n## ") != 2 {
+		t.Errorf("expected 2 entries, got: %s", stdout)
+	}
+	if !strings.Contains(stderr, "Showing 1–2 of 4") {
+		t.Errorf("missing pagination footer: %s", stderr)
+	}
+	if !strings.Contains(stderr, "--offset 2") {
+		t.Errorf("missing next-offset hint: %s", stderr)
+	}
+}
+
+func TestSearch_Offset(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, stderr, code := runJotter(t, dir, "search", "--limit", "2", "--offset", "2")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stderr)
+	}
+	if strings.Count(stdout, "\n## ") != 2 {
+		t.Errorf("expected 2 entries on page 2, got: %s", stdout)
+	}
+	if !strings.Contains(stderr, "Showing 3–4 of 4 (end)") {
+		t.Errorf("missing end-of-results footer: %s", stderr)
+	}
+}
+
+func TestSearch_OffsetExceedsTotal(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	_, stderr, code := runJotter(t, dir, "search", "--offset", "100")
+	if code == 0 {
+		t.Error("expected non-zero exit code when offset exceeds total")
+	}
+	if !strings.Contains(stderr, "offset 100 exceeds 4 results") {
+		t.Errorf("missing exceed-total message: %s", stderr)
+	}
+}
+
+func TestSearch_NegativeLimit(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	_, stderr, code := runJotter(t, dir, "search", "--limit", "-1")
+	if code == 0 {
+		t.Error("expected non-zero exit code for negative limit")
+	}
+	if !strings.Contains(stderr, "--limit must be >= 0") {
+		t.Errorf("missing validation error: %s", stderr)
+	}
+}
+
+func TestSearch_NoPaginationFooterWithoutFlags(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	_, stderr, code := runJotter(t, dir, "search")
+	if code != 0 {
+		t.Fatalf("exit code %d: %s", code, stderr)
+	}
+	if strings.Contains(stderr, "Showing") {
+		t.Errorf("pagination footer should be suppressed without flags: %s", stderr)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // project / branch commands
 // ---------------------------------------------------------------------------
