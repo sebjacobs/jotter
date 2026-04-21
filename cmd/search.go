@@ -23,6 +23,8 @@ func init() {
 	searchCmd.Flags().String("since", "", "Filter entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("until", "", "Filter entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("type", "", "Filter by entry type")
+	searchCmd.Flags().Int("limit", 0, "Maximum number of entries to return (0 = no limit)")
+	searchCmd.Flags().Int("offset", 0, "Number of entries to skip")
 	_ = searchCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = searchCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	_ = searchCmd.RegisterFlagCompletionFunc("type", completeTypes)
@@ -35,6 +37,15 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	since, _ := cmd.Flags().GetString("since")
 	until, _ := cmd.Flags().GetString("until")
 	entryType, _ := cmd.Flags().GetString("type")
+	limit, _ := cmd.Flags().GetInt("limit")
+	offset, _ := cmd.Flags().GetInt("offset")
+
+	if limit < 0 {
+		return fmt.Errorf("--limit must be >= 0")
+	}
+	if offset < 0 {
+		return fmt.Errorf("--offset must be >= 0")
+	}
 
 	var term string
 	if len(args) > 0 {
@@ -98,6 +109,36 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	fmt.Println(strings.Join(results, "\n\n"))
+	total := len(results)
+	if offset >= total {
+		fmt.Fprintf(os.Stderr, "offset %d exceeds %d result%s\n", offset, total, plural(total))
+		os.Exit(1)
+	}
+
+	end := total
+	if limit > 0 && offset+limit < total {
+		end = offset + limit
+	}
+	page := results[offset:end]
+
+	fmt.Println(strings.Join(page, "\n\n"))
+
+	if limit > 0 || offset > 0 {
+		fmt.Fprintln(os.Stderr, paginationFooter(offset, end, total))
+	}
 	return nil
+}
+
+func paginationFooter(offset, end, total int) string {
+	if end >= total {
+		return fmt.Sprintf("Showing %d–%d of %d (end)", offset+1, end, total)
+	}
+	return fmt.Sprintf("Showing %d–%d of %d — next: --offset %d", offset+1, end, total, end)
+}
+
+func plural(n int) string {
+	if n == 1 {
+		return ""
+	}
+	return "s"
 }
