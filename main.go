@@ -6,7 +6,7 @@ import (
 	"github.com/sebjacobs/jotter/cmd"
 )
 
-//go:embed all:skills
+//go:embed all:integrations
 var skillsFS embed.FS
 
 func main() {

@@ -31,8 +31,9 @@ Local builds get placeholder version info (`dev` / `none` / `unknown`). Release 
 ## Architecture
 
 ```
-main.go              -> //go:embed all:skills into skillsFS; cmd.Execute(skillsFS)
-skills/              -> embedded session-management SKILL.md files (start, save, finish, break, recover) — installed by `jotter setup`
+main.go              -> //go:embed all:integrations into skillsFS; cmd.Execute(skillsFS)
+integrations/
+  claude/            -> embedded session-management SKILL.md files (start, save, finish, break, recover) — installed by `jotter setup` to ~/.claude/skills/
 cmd/
   root.go            -> cobra root command, --version wiring, stores skillsFS
   banner.txt         -> ASCII banner embedded into root command Long description
