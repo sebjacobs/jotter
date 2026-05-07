@@ -8,16 +8,20 @@ import (
 	"strings"
 )
 
-// GitProjectName returns the basename of the git toplevel for cwd.
+// GitProjectName returns the basename of the main repo's toplevel for cwd.
+// Inside a worktree, this is the main repo's directory rather than the
+// worktree's checkout dir — so logs stay grouped under the project name even
+// when work happens in a worktree.
 // Returns an error if cwd is not inside a git repo.
 func GitProjectName(cwd string) (string, error) {
-	cmd := exec.Command("git", "rev-parse", "--show-toplevel")
+	cmd := exec.Command("git", "rev-parse", "--path-format=absolute", "--git-common-dir")
 	cmd.Dir = cwd
 	out, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("not inside a git repo (run from inside one, or pass --project explicitly)")
 	}
-	return filepath.Base(strings.TrimSpace(string(out))), nil
+	commonDir := strings.TrimSpace(string(out))
+	return filepath.Base(filepath.Dir(commonDir)), nil
 }
 
 // GitCurrentBranch returns the current branch name for cwd.
