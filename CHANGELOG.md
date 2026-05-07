@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.7.2] — 2026-05-07
+
+### Fixed
+- `jotter project` now returns the main repo's name when run from inside a git worktree. Previously it called `git rev-parse --show-toplevel`, which inside a worktree returns the worktree's checkout dir — so a worktree at `<repo>/.claude/worktrees/feature-x` would report `feature-x` as the project name, splitting that project's session log across multiple synthetic "projects" depending on whether work happened in the main checkout or a worktree. Now uses `git rev-parse --path-format=absolute --git-common-dir` and takes the parent's basename — `--git-common-dir` always points at the main repo's `.git` even from inside a worktree, so the result is the project name regardless of where the user is checked out. Bundled session skills that call `$(jotter project)` benefit automatically. Requires git ≥ 2.31 (March 2021).
+
 ## [v0.7.1] — 2026-04-20
 
 ### Fixed
@@ -94,7 +99,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.7.2...HEAD
+[v0.7.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.2
 [v0.7.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.1
 [v0.7.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.0
 [v0.6.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.6.0
