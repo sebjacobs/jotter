@@ -939,6 +939,42 @@ func TestProject_PrintsBasenameOfGitToplevel(t *testing.T) {
 	}
 }
 
+func TestProject_ReturnsMainRepoNameFromInsideWorktree(t *testing.T) {
+	// Set up a main repo, then add a worktree inside it. Running `jotter
+	// project` from the worktree should still return the main repo's name.
+	mainRepo := t.TempDir()
+	for _, cmdArgs := range [][]string{
+		{"git", "init", "-b", "main"},
+		{"git", "config", "user.email", "test@test.com"},
+		{"git", "config", "user.name", "Test"},
+		{"git", "commit", "--allow-empty", "-m", "init"},
+		{"git", "worktree", "add", "-b", "feature/x", "wt-feature-x"},
+	} {
+		c := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		c.Dir = mainRepo
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("%v failed: %s", cmdArgs, out)
+		}
+	}
+
+	worktreeDir := filepath.Join(mainRepo, "wt-feature-x")
+	cleanHome := t.TempDir()
+	cmd := exec.Command(binaryPath, "project")
+	cmd.Dir = worktreeDir
+	cmd.Env = append(os.Environ(), "HOME="+cleanHome)
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("jotter project failed: %v, stderr: %s", err, stderr.String())
+	}
+
+	want := filepath.Base(mainRepo)
+	if got := strings.TrimSpace(stdout.String()); got != want {
+		t.Errorf("project = %q, want %q (main repo basename, not worktree dir)", got, want)
+	}
+}
+
 func TestProject_ErrorsOutsideGitRepo(t *testing.T) {
 	// Use the non-git runJotter helper so cwd is not a git repo.
 	dir := initDataDir(t)
