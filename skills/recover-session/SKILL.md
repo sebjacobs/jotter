@@ -32,52 +32,22 @@ If the last entry is `start`, `checkpoint`, or `break` (or there are no entries)
 
 ### 1 — Find the transcript
 
+This skill ships a helper at `scripts/transcript.py` that lists recent JSONLs and extracts human/assistant turns. Use it rather than re-deriving the project-dir path or re-implementing the filter inline.
+
 ```bash
-PROJECT_DIR="$HOME/.claude/projects/$(pwd | sed 's|/|-|g')"
-ls -lt "$PROJECT_DIR"/*.jsonl | head -5
+~/.claude/skills/recover-session/scripts/transcript.py list
 ```
 
-Show the user the timestamp and first user message from the most recent transcript so they can confirm it's the right session.
-
-Wait for confirmation before proceeding.
+Show the user the most recent entry (timestamp + first user message) and ask: "Is this the session to recover from, or should I look at an older one?" Wait for confirmation.
 
 ### 2 — Extract the conversation
 
-Filter the JSONL to only human and assistant text turns — skip tool_use, tool_result, and other internal entries:
-
 ```bash
-LATEST=$(ls -t "$PROJECT_DIR"/*.jsonl | head -1)
-python3 -c "
-import json, sys
-
-for line in open('$LATEST'):
-    msg = json.loads(line)
-    msg_type = msg.get('type')
-
-    if msg_type == 'user':
-        content = msg.get('message', {}).get('content', '')
-        if isinstance(content, str) and content.strip():
-            print(f'## User\n{content[:500]}\n')
-        elif isinstance(content, list):
-            for block in content:
-                if isinstance(block, dict) and block.get('type') == 'text':
-                    print(f'## User\n{block[\"text\"][:500]}\n')
-                    break
-
-    elif msg_type == 'assistant':
-        content = msg.get('message', {}).get('content', '')
-        if isinstance(content, str) and content.strip():
-            print(f'## Assistant\n{content[:500]}\n')
-        elif isinstance(content, list):
-            texts = [b.get('text','') for b in content if isinstance(b, dict) and b.get('type') == 'text']
-            combined = ' '.join(texts).strip()
-            if combined:
-                print(f'## Assistant\n{combined[:500]}\n')
-" > /tmp/recovered-session.md
-wc -l /tmp/recovered-session.md
+~/.claude/skills/recover-session/scripts/transcript.py extract <path-from-step-1>
+# writes /tmp/recovered-session.md by default; pass --out to override
 ```
 
-Read the extracted conversation to understand what happened.
+Read `/tmp/recovered-session.md` to understand what happened.
 
 ### 3 — Write the recovery entry
 
