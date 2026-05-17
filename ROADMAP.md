@@ -22,15 +22,6 @@ The escape hatch is closed: `--no-quarantine` is deprecated with **no replacemen
 
 Sources: [Homebrew 5.0.0 release notes](https://brew.sh/2025/11/12/homebrew-5.0.0/), [Issue #20755](https://github.com/Homebrew/brew/issues/20755), [Discussion #6537](https://github.com/orgs/Homebrew/discussions/6537).
 
-### Release workflow hygiene — Node.js 24 migration + pin GoReleaser action version
-
-Two warnings surfaced on the v0.8.0 release run that are worth clearing before they bite:
-
-1. **Node.js 20 deprecation on GitHub Actions runners** — `actions/checkout@v4`, `actions/setup-go@v5`, and `goreleaser/goreleaser-action@v6` all run on Node 20. Runners force Node 24 from **2026-06-02** and Node 20 is removed entirely on **2026-09-16**. Bump each action to the version that supports Node 24, or set `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true` to test the migration early.
-2. **`goreleaser-action` `version: latest` auto-pinned to `~> v2`** — the action emits a warning when `version: latest` is used. Pin explicitly to `~> v2` (or the exact version) in `.github/workflows/release.yml` to silence the warning and lock the GoReleaser CLI version that builds the release.
-
-Both are warnings, not failures — the v0.8.0 release succeeded. Worth a single PR clearing both alongside any other release-workflow tidy-ups.
-
 ### Relative timestamps in `jotter ls` (PR #10, draft)
 
 Show human-friendly relative times ("2h ago", "yesterday") in `jotter ls` output. Branch `feature/ls-relative-timestamps` is rebased onto main and green; ready to move out of draft once the UX is confirmed.
@@ -128,6 +119,7 @@ Generalise `jotter setup` beyond Claude Code to Codex, Aider, Cursor. Detect whi
 
 ## Shipped
 
+- **Release workflow hygiene — Node 24 migration + GoReleaser CLI pin** (PR #28, merged 8ca86c0) — bumped every action in `.github/workflows/{ci,release}.yml` to a Node 24-compatible major (`checkout` v4→v6, `setup-go` v5→v6, `goreleaser-action` v6→v7, `golangci-lint-action` v7→v9) ahead of the 2026-06-02 forced-migration and 2026-09-16 Node 20 removal deadlines. Replaced `goreleaser-action`'s `version: latest` with an explicit `~> v2` pin so a future GoReleaser v3 with breaking config changes won't get picked up unexpectedly. PR #28's CI run came back with zero annotations — both the Node 20 deprecation banner and the `version: latest` warning are gone.
 - **`jotter tail -n` shorthand** (v0.8.0, tag 5fe901c) — added `-n` as shorthand for `--limit` on `jotter tail`, matching the convention used by `tail`, `head`, and `git log`. `--limit` keeps working unchanged. Paired test confirms the alias end-to-end. Bundled cleanup commit swapped `map[string]interface{}` → `map[string]any` across test files to clear IDE diagnostics (tests only, no behaviour change).
 - **v0.7.1 release-infra patch + Homebrew tap unblocked** (v0.7.1, tag 847a857) — rotated `HOMEBREW_TAP_GITHUB_TOKEN` (fine-grained PAT, `contents: write` on `sebjacobs/homebrew-tap`), cut a zero-code v0.7.1 to re-trigger the release workflow. `sebjacobs/homebrew-tap/Casks/jotter.rb` is now at 0.7.1, caught up from v0.5.0. Alternative (delete v0.7.0 release assets + rerun) rejected as destructive on public state. Lesson captured: `just check` and `goreleaser release --snapshot --clean` belong in the release checklist even for zero-code patches — skipped both pre-push on v0.7.1 and only got away with it because the change was CHANGELOG-only.
 - **`jotter ls --since` / `--until`** (v0.7.0, PR #24 merged 6877e56) — filter the project/branch/entry list to a date or timestamp window, mirroring the flags on `search`. `last:` timestamps and counts reflect the in-window slice so the display stays internally consistent. Factored `parseBoundary` / `parseWindow` / `inWindow` into `cmd/boundary.go` as a shared helper in a standalone refactor commit.
