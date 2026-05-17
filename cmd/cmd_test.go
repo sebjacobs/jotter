@@ -334,6 +334,27 @@ func TestTail_LimitReturnsMultiple(t *testing.T) {
 	}
 }
 
+func TestTail_NShorthandAliasesLimit(t *testing.T) {
+	dir := initDataDir(t)
+	for i := range 5 {
+		runJotter(t, dir,
+			"write", "--project", "proj", "--branch", "main",
+			"--type", "checkpoint", "--content", fmt.Sprintf("Entry %d", i))
+	}
+	stdout, _, code := runJotter(t, dir,
+		"tail", "--project", "proj", "--branch", "main",
+		"-n", "3")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Entry 2") || !strings.Contains(stdout, "Entry 3") || !strings.Contains(stdout, "Entry 4") {
+		t.Errorf("missing expected entries: %s", stdout)
+	}
+	if strings.Contains(stdout, "Entry 1") || strings.Contains(stdout, "Entry 0") {
+		t.Errorf("should not contain older entries: %s", stdout)
+	}
+}
+
 func TestTail_LimitExceedingCountReturnsAll(t *testing.T) {
 	dir := initDataDir(t)
 	runJotter(t, dir,

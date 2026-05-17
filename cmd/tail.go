@@ -18,7 +18,7 @@ var tailCmd = &cobra.Command{
 func init() {
 	tailCmd.Flags().String("project", "", "Project name (required)")
 	tailCmd.Flags().String("branch", "", "Branch name (required)")
-	tailCmd.Flags().Int("limit", 1, "Number of entries to return")
+	tailCmd.Flags().IntP("limit", "n", 1, "Number of entries to return")
 	_ = tailCmd.MarkFlagRequired("project")
 	_ = tailCmd.MarkFlagRequired("branch")
 	_ = tailCmd.RegisterFlagCompletionFunc("project", completeProjects)
