@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.9.0] — 2026-05-17
+
+### Changed
+- Bundled `break-session`, `finish-session`, and `save-session` skills now share an explicit walk-away guarantee — when the skill completes, dirty work is committed and the log entry is written, with no surprise follow-up actions. Each skill renders a preview quoted block before the `jotter write` call so the content is visible before it lands in the log, and ends with an explicit confirmation line stating the skill is done. The write is deliberately the final action, so a user can invoke `/finish`, see the confirmation, and close the laptop. Per-skill specialisation: `/break` uses a single auto-WIP commit (no ceremony — the user is walking away now); `/save` and `/finish` propose commit groupings and wait for approval.
+- `save-session` drops its pre-read step (previously `jotter tail --limit 3` before every save). A duplicate checkpoint is cheaper than two extra reads on every invocation.
+- `recover-session` no longer embeds a ~30-line python heredoc inline. The JSONL transcript filter has been extracted into `skills/recover-session/scripts/transcript.py` with `list` and `extract` subcommands. The setup wizard's `fs.WalkDir` already recurses into subdirectories, so the script installs at `~/.claude/skills/recover-session/scripts/` automatically with no code changes.
+
+### Added
+- `save-session` gains a "note" mode — single-observation jots ("make a note", "jot it down", "note that") that skip the commit step and the `--next` handover. Distinct from the heavier checkpoint mode.
+
 ## [v0.8.0] — 2026-05-17
 
 ### Added
@@ -104,7 +114,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.9.0...HEAD
+[v0.9.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.9.0
 [v0.8.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.8.0
 [v0.7.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.2
 [v0.7.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.1
