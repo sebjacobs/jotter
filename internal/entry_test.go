@@ -18,7 +18,7 @@ func TestEntryMarshal_BasicFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var m map[string]interface{}
+	var m map[string]any
 	json.Unmarshal(data, &m)
 
 	if m["timestamp"] != "2026-04-11T10:30:00" {
@@ -43,7 +43,7 @@ func TestEntryMarshal_WithNext(t *testing.T) {
 		Next:      "Continue tomorrow",
 	}
 	data, _ := json.Marshal(e)
-	var m map[string]interface{}
+	var m map[string]any
 	json.Unmarshal(data, &m)
 
 	if m["next"] != "Continue tomorrow" {

@@ -110,7 +110,7 @@ func TestWrite_CreatesFileAndDirectories(t *testing.T) {
 	if err != nil {
 		t.Fatalf("file not created: %v", err)
 	}
-	var entry map[string]interface{}
+	var entry map[string]any
 	json.Unmarshal([]byte(strings.TrimSpace(string(data))), &entry)
 	if entry["type"] != "start" {
 		t.Errorf("type = %v", entry["type"])
@@ -137,7 +137,7 @@ func TestWrite_ISOTimestamp(t *testing.T) {
 		"--type", "start", "--content", "Check timestamp")
 
 	data, _ := os.ReadFile(filepath.Join(dir, "logs", "proj", "main.jsonl"))
-	var entry map[string]interface{}
+	var entry map[string]any
 	json.Unmarshal([]byte(strings.TrimSpace(string(data))), &entry)
 	ts, ok := entry["timestamp"].(string)
 	if !ok {
@@ -156,7 +156,7 @@ func TestWrite_NextFieldPresent(t *testing.T) {
 		"--next", "Pick up testing")
 
 	data, _ := os.ReadFile(filepath.Join(dir, "logs", "proj", "main.jsonl"))
-	var entry map[string]interface{}
+	var entry map[string]any
 	json.Unmarshal([]byte(strings.TrimSpace(string(data))), &entry)
 	if entry["next"] != "Pick up testing" {
 		t.Errorf("next = %v", entry["next"])
@@ -170,7 +170,7 @@ func TestWrite_NextFieldAbsent(t *testing.T) {
 		"--type", "start", "--content", "Starting up")
 
 	data, _ := os.ReadFile(filepath.Join(dir, "logs", "proj", "main.jsonl"))
-	var entry map[string]interface{}
+	var entry map[string]any
 	json.Unmarshal([]byte(strings.TrimSpace(string(data))), &entry)
 	if _, ok := entry["next"]; ok {
 		t.Error("next field should be absent")
@@ -225,7 +225,7 @@ func TestWrite_MultilineContent(t *testing.T) {
 		"--type", "checkpoint", "--content", "Line one\nLine two\nLine three")
 
 	data, _ := os.ReadFile(filepath.Join(dir, "logs", "proj", "main.jsonl"))
-	var entry map[string]interface{}
+	var entry map[string]any
 	json.Unmarshal([]byte(strings.TrimSpace(string(data))), &entry)
 	if entry["content"] != "Line one\nLine two\nLine three" {
 		t.Errorf("content = %v", entry["content"])
