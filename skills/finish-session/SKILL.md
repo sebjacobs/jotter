@@ -1,13 +1,15 @@
 ---
 name: finish-session
-description: Write a finish entry to the jotter log at the end of a session, capturing what shipped and the handover for next session. Use when the user says "/finish", "/end", "let's wrap up", "wrap up", "let's finish", "end this session", "let's call it", "that's enough for today", or similar.
+description: Wrap up a session — commit any dirty work, write a finish entry to the jotter log. Leaves a walk-away state. Use when the user says "/finish", "/end", "let's wrap up", "wrap up", "let's finish", "end this session", "let's call it", "that's enough for today", or similar.
 ---
 
 # Finish Session
 
-Writes a `finish` entry to the jotter log — the session summary plus a `--next` handover field that `/start` will surface next time. Layer your own end-of-session conventions (commits, roadmap updates, doc refresh) on top of this skill.
+End-of-session wrap. **Walk-away guarantee:** when this skill completes, dirty work is committed and the finish entry is written to the jotter log. The skill terminates after the write — no surprise follow-up actions.
 
 **Mid-session break, not the end?** Use `break-session` instead.
+
+Layer your own end-of-session conventions (ROADMAP updates, doc refresh, PR housekeeping, cron cancellation) on top of this skill — do them **before** invoking `/finish` so the finish entry can accurately reference what was done.
 
 ---
 
@@ -20,17 +22,43 @@ PROJECT=$(jotter project)
 BRANCH=$(jotter branch)
 ```
 
-### 2 — Write the finish entry
+### 2 — Commit dirty work
 
-Summarise the session — what was built or fixed, key decisions, gotchas or debt left behind. The `--next` field is the handover: the 2-3 most important things to pick up next session, in priority order.
+```bash
+git status
+git diff --stat
+```
+
+If the tree is clean, skip to step 3. Otherwise propose a commit grouping, wait for the user to approve, and commit. One commit per logical change.
+
+### 3 — Preview the finish entry
+
+Render the draft back to the user as a quoted block **before** writing, so they can see what's about to land in the log. Summarise the session — what was built or fixed, key decisions, gotchas. The `--next` field is the handover: 2-3 priorities, in order.
+
+> **Content:**
+> - <bullet 1: what shipped>
+> - <bullet 2: key decision>
+> - <bullet 3: gotcha or debt>
+>
+> **Next:**
+> - <priority 1>
+> - <priority 2>
+
+### 4 — Write — final action of the skill
 
 ```bash
 jotter write \
   --project "$PROJECT" \
   --branch "$BRANCH" \
   --type finish \
-  --content "<session summary: what shipped, decisions made, gotchas>" \
-  --next "<top priorities for next session, in order>"
+  --content "<bullets from preview>" \
+  --next "<priorities from preview>"
 ```
 
-`jotter write --type finish` auto-commits and pushes the data repo so the handover is durable even if the machine goes away.
+`jotter write --type finish` auto-commits and pushes the data repo so the handover is durable.
+
+### 5 — Confirm
+
+> "Finish saved at HH:MM. Tree clean, log written. Safe to close the laptop."
+
+No further actions after this — the skill is done.

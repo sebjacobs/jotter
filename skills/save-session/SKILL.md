@@ -1,40 +1,81 @@
 ---
 name: save-session
-description: Write a mid-session checkpoint entry to the jotter log. Use when the user says "/save", "checkpoint", "save progress", or before risky operations like schema migrations, large refactors, or long-running tasks.
+description: Mid-session checkpoint — commit any dirty work, snapshot decisions and progress to the jotter log. Walk-away guarantee. Use when the user says "/save", "checkpoint", "save progress", "jot it down", "make a note", or before risky operations like schema migrations, large refactors, or long-running tasks.
 ---
 
 # Save Session
 
-Writes a `checkpoint` entry to the jotter log — a snapshot of current progress and decisions without ending the session. Use before risky operations, or to preserve state before a `/clear`.
+Mid-session checkpoint. **Walk-away guarantee for the checkpoint mode:** when the skill completes, dirty work is committed and the log entry is written. Safe to `/clear`, walk away, or continue.
+
+Use before risky operations (migrations, large refactors) or before `/clear`.
 
 ---
 
-## Steps
+## Two modes
 
-### 1 — Determine project and branch
+### Checkpoint (`/save`, "checkpoint", "save progress")
+
+Progress so far plus what's next.
+
+#### 1 — Determine project and branch
 
 ```bash
 PROJECT=$(jotter project)
 BRANCH=$(jotter branch)
 ```
 
-### 2 — Read recent context (avoid duplication)
+#### 2 — Commit dirty work
 
 ```bash
-jotter tail --project "$PROJECT" --branch "$BRANCH" --limit 3
+git status
+git diff --stat
 ```
 
-Review what's already been captured so the checkpoint adds new information rather than repeating earlier entries.
+If the tree is clean, skip to step 3. Otherwise propose a commit grouping, wait for the user to approve, and commit. These are proper commits (use `/break` for WIP).
 
-### 3 — Write the checkpoint
+#### 3 — Preview the checkpoint
+
+Render the draft back to the user as a quoted block before writing:
+
+> **Content:**
+> - <progress since last entry, decisions made, current state — bullets>
+>
+> **Next:** <what you're about to do next>
+
+Keep it concise — a snapshot, not a summary.
+
+#### 4 — Write — final action of the skill
 
 ```bash
 jotter write \
   --project "$PROJECT" \
   --branch "$BRANCH" \
   --type checkpoint \
-  --content "<progress since last entry, decisions made, current state>" \
-  --next "<what you're about to do next>"
+  --content "<bullets from preview>" \
+  --next "<next from preview>"
 ```
 
-Keep it concise — a snapshot, not a summary.
+#### 5 — Confirm
+
+> "Checkpoint saved at HH:MM. Tree clean, log written. Safe to /clear or continue."
+
+### Note ("jot it down", "make a note", "note that")
+
+Single observation, no handover, no commit. A casual jot to remember something — not a state snapshot.
+
+#### 1 — Preview
+
+> **Note:** <the thing to remember>
+
+#### 2 — Write — final action
+
+```bash
+jotter write \
+  --project "$(jotter project)" --branch "$(jotter branch)" \
+  --type note \
+  --content "<note from preview>"
+```
+
+#### 3 — Confirm
+
+> "Noted at HH:MM."
