@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.8.0] — 2026-05-17
+
+### Added
+- `jotter tail -n` — shorthand alias for `--limit`. Matches the `-n` convention used by `tail`, `head`, and `git log` for "show this many entries". `--limit` keeps working unchanged so existing scripts and skills are unaffected.
+
 ## [v0.7.2] — 2026-05-07
 
 ### Fixed
@@ -99,7 +104,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.7.2...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.8.0...HEAD
+[v0.8.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.8.0
 [v0.7.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.2
 [v0.7.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.1
 [v0.7.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.0
