@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `jotter sync` — recover from a failed `finish` push. When a finish entry's push fails (offline, or the remote moved on) the entry is committed locally but never reaches the remote; `jotter sync` reconciles by fetching, rebasing local entries on top of any remote commits, then pushing. It reports whether it pushed, rebased-then-pushed, or was already in sync, and errors clearly when no remote is configured.
+
+### Changed
+- `GitPush` now sets the upstream (`push -u origin HEAD`) on a branch that has no tracking branch yet, so the first push from a freshly `jotter setup` repo lands instead of failing with "no upstream branch". Bare pushes are used once tracking is established.
+
 ## [v0.9.0] — 2026-05-17
 
 ### Changed

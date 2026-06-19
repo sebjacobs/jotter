@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
@@ -51,12 +52,64 @@ func GitCommit(dataDir, filePath, message string) error {
 	return nil
 }
 
-// GitPush pushes the data repo to its remote.
+// GitPush pushes the data repo to its remote. On a branch that has no upstream
+// configured yet (e.g. a freshly `jotter setup` repo whose first push never
+// landed), it pushes with -u so the tracking branch is set and later pushes are
+// bare.
 func GitPush(dataDir string) error {
-	if err := run(dataDir, "git", "push"); err != nil {
+	if gitHasUpstream(dataDir) {
+		if err := run(dataDir, "git", "push"); err != nil {
+			return fmt.Errorf("git push: %w", err)
+		}
+		return nil
+	}
+	if err := run(dataDir, "git", "push", "-u", "origin", "HEAD"); err != nil {
 		return fmt.Errorf("git push: %w", err)
 	}
 	return nil
+}
+
+// GitFetch updates the data repo's remote-tracking refs.
+func GitFetch(dataDir string) error {
+	if err := run(dataDir, "git", "fetch"); err != nil {
+		return fmt.Errorf("git fetch: %w", err)
+	}
+	return nil
+}
+
+// GitPullRebase rebases the local branch onto its upstream, replaying local
+// entries on top of any commits the remote gained since the last push.
+func GitPullRebase(dataDir string) error {
+	if err := run(dataDir, "git", "pull", "--rebase"); err != nil {
+		return fmt.Errorf("git pull --rebase: %w", err)
+	}
+	return nil
+}
+
+// GitAheadBehind reports how many commits the local branch is ahead of and
+// behind its upstream. hasUpstream is false when no tracking branch is
+// configured, in which case ahead and behind are both zero.
+func GitAheadBehind(dataDir string) (ahead, behind int, hasUpstream bool, err error) {
+	cmd := exec.Command("git", "rev-list", "--left-right", "--count", "@{u}...HEAD")
+	cmd.Dir = dataDir
+	out, runErr := cmd.Output()
+	if runErr != nil {
+		return 0, 0, false, nil
+	}
+	fields := strings.Fields(string(out))
+	if len(fields) != 2 {
+		return 0, 0, true, fmt.Errorf("unexpected rev-list output: %q", out)
+	}
+	behind, _ = strconv.Atoi(fields[0])
+	ahead, _ = strconv.Atoi(fields[1])
+	return ahead, behind, true, nil
+}
+
+// gitHasUpstream reports whether the current branch has a configured upstream.
+func gitHasUpstream(dataDir string) bool {
+	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "@{u}")
+	cmd.Dir = dataDir
+	return cmd.Run() == nil
 }
 
 // GitHasRemote reports whether the data repo has any remote configured.

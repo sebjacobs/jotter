@@ -41,6 +41,7 @@ cmd/
   tail.go            -> read last N entries, render as markdown
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
+  sync.go            -> fetch + rebase + push to recover from a failed finish push
   config.go          -> print resolved .jotter data_dir for current cwd
   completion.go      -> bash/zsh/fish completion generator
   setup.go           -> `jotter setup` wizard driver; huhPrompter (huh-backed Prompter impl)
@@ -48,7 +49,7 @@ internal/
   config.go          -> resolve data dir by walking up from cwd for .jotter TOML files; falls back to ~/.jotter
   entry.go           -> Entry struct, JSONL marshal (Python-compatible spacing), markdown format
   storage.go         -> path construction, branch sanitisation (/ -> +), glob collection
-  git.go             -> git add/commit/push via exec.Command
+  git.go             -> git add/commit/push/fetch/pull-rebase + ahead-behind via exec.Command
   color.go           -> TTY-aware ANSI colouring helpers
   setup/
     wizard.go        -> Step interface, State/Status enums, Context, Prompter, Run driver

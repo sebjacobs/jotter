@@ -909,6 +909,127 @@ func TestSearch_NoResults(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// sync command
+// ---------------------------------------------------------------------------
+
+func git(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %v failed: %s", args, out)
+	}
+	return string(out)
+}
+
+// initDataDirWithRemote creates a bare remote and a data dir cloned from it, so
+// the data dir has an "origin" remote and a tracking branch. Returns
+// (dataDir, bareRemote).
+func initDataDirWithRemote(t *testing.T) (string, string) {
+	t.Helper()
+	bare := t.TempDir()
+	git(t, bare, "init", "--bare", "-b", "main")
+
+	seed := t.TempDir()
+	git(t, seed, "init", "-b", "main")
+	git(t, seed, "config", "user.email", "test@test.com")
+	git(t, seed, "config", "user.name", "Test")
+	os.MkdirAll(filepath.Join(seed, "logs"), 0o755)
+	os.WriteFile(filepath.Join(seed, "logs", ".gitkeep"), []byte{}, 0o644)
+	git(t, seed, "add", ".")
+	git(t, seed, "commit", "-m", "init")
+	git(t, seed, "remote", "add", "origin", bare)
+	git(t, seed, "push", "-u", "origin", "main")
+
+	dataDir := t.TempDir()
+	git(t, dataDir, "clone", bare, dataDir)
+	git(t, dataDir, "config", "user.email", "test@test.com")
+	git(t, dataDir, "config", "user.name", "Test")
+	return dataDir, bare
+}
+
+func TestSync_NoRemoteExitsWithError(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code := runJotter(t, dir, "sync")
+	if code == 0 {
+		t.Error("expected non-zero exit code with no remote")
+	}
+	if !strings.Contains(stderr, "no git remote") {
+		t.Errorf("stderr missing expected message: %s", stderr)
+	}
+}
+
+func TestSync_PushesPendingCommits(t *testing.T) {
+	dir, bare := initDataDirWithRemote(t)
+
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "checkpoint", "--content", "Unpushed work")
+
+	stdout, stderr, code := runJotter(t, dir, "sync")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s stderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "Pushed") {
+		t.Errorf("stdout should report a push: %s", stdout)
+	}
+
+	log := git(t, bare, "log", "--oneline")
+	if !strings.Contains(log, "session: proj/main checkpoint") {
+		t.Errorf("commit did not reach the remote: %s", log)
+	}
+}
+
+func TestSync_AlreadyInSync(t *testing.T) {
+	dir, _ := initDataDirWithRemote(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "checkpoint", "--content", "Work")
+	runJotter(t, dir, "sync")
+
+	stdout, _, code := runJotter(t, dir, "sync")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	if !strings.Contains(stdout, "Already in sync") {
+		t.Errorf("expected already-in-sync message: %s", stdout)
+	}
+}
+
+func TestSync_RebasesWhenRemoteMovedOn(t *testing.T) {
+	dir, bare := initDataDirWithRemote(t)
+
+	// A second clone pushes a commit, so the remote is ahead of dir.
+	other := t.TempDir()
+	git(t, other, "clone", bare, other)
+	git(t, other, "config", "user.email", "test@test.com")
+	git(t, other, "config", "user.name", "Test")
+	os.WriteFile(filepath.Join(other, "logs", "remote-change.txt"), []byte("hi"), 0o644)
+	git(t, other, "add", ".")
+	git(t, other, "commit", "-m", "remote change")
+	git(t, other, "push")
+
+	// Meanwhile dir has its own unpushed entry — histories diverge.
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "checkpoint", "--content", "Local work")
+
+	stdout, stderr, code := runJotter(t, dir, "sync")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s stderr: %s", code, stdout, stderr)
+	}
+	if !strings.Contains(stdout, "rebasing") {
+		t.Errorf("expected rebase message: %s", stdout)
+	}
+
+	log := git(t, bare, "log", "--oneline")
+	if !strings.Contains(log, "session: proj/main checkpoint") {
+		t.Errorf("local commit did not reach the remote: %s", log)
+	}
+	if !strings.Contains(log, "remote change") {
+		t.Errorf("remote commit missing after rebase: %s", log)
+	}
+}
+
+// ---------------------------------------------------------------------------
 // project / branch commands
 // ---------------------------------------------------------------------------
 
