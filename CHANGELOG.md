@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.10.0] — 2026-06-19
+
 ### Added
 - `jotter sync` — recover from a failed `finish` push. When a finish entry's push fails (offline, or the remote moved on) the entry is committed locally but never reaches the remote; `jotter sync` reconciles by fetching, rebasing local entries on top of any remote commits, then pushing. It reports whether it pushed, rebased-then-pushed, or was already in sync, and errors clearly when no remote is configured.
 
 ### Changed
 - `GitPush` now sets the upstream (`push -u origin HEAD`) on a branch that has no tracking branch yet, so the first push from a freshly `jotter setup` repo lands instead of failing with "no upstream branch". Bare pushes are used once tracking is established.
+
+### Fixed
+- `recover-session` no longer treats `checkpoint` and `break` entries as crash signals. The previous logic ran the full recovery flow whenever the last log line wasn't `finish`, which would wrongly close active sessions saved via `/save` + `/clear`. Recovery now only kicks in on actual crashes.
 
 ## [v0.9.0] — 2026-05-17
 
@@ -120,7 +125,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.10.0...HEAD
+[v0.10.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.10.0
 [v0.9.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.9.0
 [v0.8.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.8.0
 [v0.7.2]: https://github.com/sebjacobs/jotter/releases/tag/v0.7.2
