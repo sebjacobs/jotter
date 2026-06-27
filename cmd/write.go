@@ -53,6 +53,10 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if regErr := internal.RegisterDataDir(dataDir); regErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not register data dir for background push: %v\n", regErr)
+	}
+
 	path, err := internal.JSONLPath(dataDir, project, branch)
 	if err != nil {
 		return err
