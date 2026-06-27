@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `jotter write` and `jotter tail` now infer `--project` and `--branch` from git by default. When omitted, the project is the basename of the git toplevel (the same value `jotter project` prints) and the branch is the current git branch (matching `jotter branch`), so a bare `jotter write --type note --content "…"` or `jotter tail` Just Works inside a repo. Passing either flag explicitly still overrides the inferred value. Outside a git repo, the commands now error asking for the flag rather than failing a required-flag check.
+
 ## [v0.11.0] — 2026-06-27
 
 ### Added
