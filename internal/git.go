@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -41,6 +42,28 @@ func GitCurrentBranch(cwd string) (string, error) {
 	return branch, nil
 }
 
+// GitConfigGet reads a git config value scoped to the repo at cwd. An unset key
+// (where `git config --get` exits 1) returns "" with a nil error; any other
+// failure returns the error.
+func GitConfigGet(cwd, key string) (string, error) {
+	cmd := exec.Command("git", "config", "--get", key)
+	cmd.Dir = cwd
+	out, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", nil
+		}
+		return "", fmt.Errorf("git config --get %s: %w", key, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// GitConfigSet writes a git config value scoped to the repo at cwd.
+func GitConfigSet(cwd, key, value string) error {
+	return run(cwd, "git", "config", key, value)
+}
+
 // GitCommit stages a file and commits it in the data repo.
 func GitCommit(dataDir, filePath, message string) error {
 	if err := run(dataDir, "git", "add", filePath); err != nil {
@@ -50,6 +73,28 @@ func GitCommit(dataDir, filePath, message string) error {
 		return fmt.Errorf("git commit: %w", err)
 	}
 	return nil
+}
+
+// GitAdd stages a path within the data repo.
+func GitAdd(dataDir, path string) error {
+	return run(dataDir, "git", "add", path)
+}
+
+// GitLocalBranches returns the local branch names in cwd's repo.
+func GitLocalBranches(cwd string) ([]string, error) {
+	cmd := exec.Command("git", "for-each-ref", "--format=%(refname:short)", "refs/heads")
+	cmd.Dir = cwd
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("listing branches: %w", err)
+	}
+	var branches []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			branches = append(branches, line)
+		}
+	}
+	return branches, nil
 }
 
 // GitMove renames a tracked path within the data repo, staging the rename.

@@ -114,6 +114,20 @@ jotter mv old-name new-name
 
 A project's jotter name is the basename of its git toplevel, so renaming the project directory orphans its logs under the old name. `mv` renames `logs/<old-name>` to `logs/<new-name>` and commits the move locally (it refuses to overwrite an existing destination).
 
+### branch
+
+Print the current branch, and manage per-branch logs.
+
+```bash
+jotter branch                      # print the current git branch
+jotter branch mv old new           # rename a branch's logs (logs/<project>/old.jsonl -> new.jsonl)
+jotter branch adopt                # anchor existing branches so future renames are tracked
+```
+
+Logs are stored one file per branch, so a `git branch -m` would otherwise orphan a branch's history under the old name. Jotter handles this automatically: on the first write to a branch it records a stable id in your project repo's git config (`branch.<name>.jotter-id`) — which survives the rename, because git moves the whole `[branch]` config section — and a matching `<branch>.jsonl.id` sidecar next to the logfile. The next write after a rename spots the mismatch and moves the logfile into place, so history stays continuous with no action from you.
+
+`branch mv` is the manual equivalent for when you won't write to a branch again (e.g. a merged feature branch). `branch adopt` migrates a repo whose branches predate this feature — run it once so a branch renamed *before* its next write is still followed. Both default `--project` to the git toplevel basename.
+
 ### tail
 
 Show recent entries for a branch.
@@ -199,12 +213,17 @@ $JOTTER_DATA/
   logs/
     project-a/
       main.jsonl
+      main.jsonl.id
       feature+auth.jsonl
+      feature+auth.jsonl.id
     project-b/
       main.jsonl
+      main.jsonl.id
 ```
 
 Branch names are sanitised: `/` becomes `+` in filenames (e.g. `feature/auth` -> `feature+auth.jsonl`).
+
+Each logfile has a `.jsonl.id` sidecar holding the branch's stable id (see [`branch`](#branch)). It's how a renamed branch's logs are matched back to their history; `ls`, `tail`, and `search` ignore it.
 
 Each line is a JSON object:
 
