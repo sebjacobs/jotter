@@ -143,7 +143,7 @@ func (remoteStep) Run(ctx *Context) (Result, error) {
 	ctx.Answers.RemoteURL = url
 
 	if url == "" {
-		return Result{Status: StatusSkipped, Message: "no remote configured (finish entries will not push)"}, nil
+		return Result{Status: StatusSkipped, Message: "no remote configured (entries will not push)"}, nil
 	}
 
 	switch {
@@ -405,7 +405,7 @@ func (daemonStep) Detect(ctx *Context) (State, error) {
 }
 
 func (daemonStep) Run(ctx *Context) (Result, error) {
-	install, err := ctx.Prompter.Confirm("Install the background push timer so finishes push automatically?", true)
+	install, err := ctx.Prompter.Confirm("Install the background push timer so entries push automatically?", true)
 	if err != nil {
 		return Result{}, err
 	}

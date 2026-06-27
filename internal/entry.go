@@ -24,8 +24,10 @@ const (
 	DateFormat      = "2006-01-02"
 )
 
-// ValidEntryTypes lists all allowed entry types, in canonical order.
-var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "finish", "handover"}
+// ValidEntryTypes lists all allowed entry types, in canonical order. "finish"
+// is a legacy alias for "stop", kept valid so older logs and existing habits
+// keep working.
+var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "stop", "finish", "handover"}
 
 // IsValidEntryType checks whether a type string is one of the allowed entry types.
 func IsValidEntryType(t string) bool {

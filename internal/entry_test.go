@@ -191,7 +191,7 @@ func TestMarshalJSONL_EscapesNewlines(t *testing.T) {
 }
 
 func TestValidEntryTypes(t *testing.T) {
-	for _, typ := range []string{"start", "checkpoint", "note", "break", "finish", "handover"} {
+	for _, typ := range []string{"start", "checkpoint", "note", "break", "stop", "finish", "handover"} {
 		if !IsValidEntryType(typ) {
 			t.Errorf("%q should be valid", typ)
 		}

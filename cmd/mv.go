@@ -16,7 +16,7 @@ var mvCmd = &cobra.Command{
 		"A project's jotter name is the basename of its git toplevel, so renaming the\n" +
 		"project directory on disk orphans its logs under the old name. Run this to\n" +
 		"carry them over: logs/<old-project> is renamed to logs/<new-project> and the\n" +
-		"rename is committed (locally — like every entry except finish, it is not pushed).",
+		"rename is committed (locally — like every entry, the push to the remote is left to the background timer).",
 	Args:              cobra.ExactArgs(2),
 	RunE:              runMv,
 	ValidArgsFunction: completeMvArgs,
