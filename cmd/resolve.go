@@ -32,3 +32,17 @@ func resolveBranch(cmd *cobra.Command) (string, error) {
 	}
 	return internal.GitCurrentBranch(cwd)
 }
+
+// onBranch reports whether cwd's repo is exactly the project and branch being
+// written to — the precondition for branch-rename reconciliation. A
+// cross-project or off-branch write (or one run outside a git repo) returns
+// false, so reconciliation is skipped and the write behaves as it always has.
+func onBranch(cwd, project, branch string) bool {
+	if p, err := internal.GitProjectName(cwd); err != nil || p != project {
+		return false
+	}
+	if b, err := internal.GitCurrentBranch(cwd); err != nil || b != branch {
+		return false
+	}
+	return true
+}

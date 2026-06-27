@@ -57,6 +57,17 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+
+	trackSidecar := false
+	if cwd, cwdErr := os.Getwd(); cwdErr == nil && onBranch(cwd, project, branch) {
+		if reconciled, warn := internal.ReconcileBranch(dataDir, cwd, project, branch); warn != nil {
+			fmt.Fprintf(os.Stderr, "Warning: branch tracking skipped: %v\n", warn)
+		} else {
+			path = reconciled
+			trackSidecar = true
+		}
+	}
+
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return fmt.Errorf("creating directories: %w", err)
 	}
@@ -91,6 +102,13 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	rel, _ := filepath.Rel(dataDir, path)
 	timestamp := entry.Timestamp
 	commitMsg := fmt.Sprintf("session: %s/%s %s %s", project, branch, entryType, timestamp)
+	if trackSidecar {
+		if sidecar, scErr := internal.SidecarPath(dataDir, project, branch); scErr == nil {
+			if _, statErr := os.Stat(sidecar); statErr == nil {
+				_ = internal.GitAdd(dataDir, sidecar)
+			}
+		}
+	}
 	if err := internal.GitCommit(dataDir, path, commitMsg); err != nil {
 		return fmt.Errorf("git commit: %w", err)
 	}
