@@ -25,7 +25,7 @@ const (
 )
 
 // ValidEntryTypes lists all allowed entry types, in canonical order.
-var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "finish"}
+var ValidEntryTypes = []string{"start", "checkpoint", "note", "break", "finish", "handover"}
 
 // IsValidEntryType checks whether a type string is one of the allowed entry types.
 func IsValidEntryType(t string) bool {
