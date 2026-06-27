@@ -138,18 +138,18 @@ func ReconcileBranch(dataDir, cwd, project, branch string) (logPath string, warn
 		return fallback, nil
 	default:
 		// loc holds the stale (sanitised) name — a rename happened.
-		if err := moveBranchLogs(dataDir, project, UnsanitiseBranch(loc), branch); err != nil {
+		if err := MoveBranchLogs(dataDir, project, UnsanitiseBranch(loc), branch); err != nil {
 			return fallback, err
 		}
 		return fallback, nil
 	}
 }
 
-// moveBranchLogs git-mv's a branch's logfile and its id sidecar from old to new
+// MoveBranchLogs git-mv's a branch's logfile and its id sidecar from old to new
 // within the data repo and commits the move. Shared by ReconcileBranch and the
 // `jotter branch mv` command. Refuses when the destination logfile already
 // exists, mirroring `jotter mv`'s refuse-to-overwrite guard.
-func moveBranchLogs(dataDir, project, old, new string) error {
+func MoveBranchLogs(dataDir, project, old, new string) error {
 	if old == new {
 		return nil
 	}

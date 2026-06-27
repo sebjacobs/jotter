@@ -49,7 +49,7 @@ func TestMoveBranchLogs_RenamesFilesAndSidecarAndCommits(t *testing.T) {
 	data := seedDataRepo(t)
 	seedLog(t, data, "proj", "old", "id1")
 
-	if err := moveBranchLogs(data, "proj", "old", "new"); err != nil {
+	if err := MoveBranchLogs(data, "proj", "old", "new"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -72,7 +72,7 @@ func TestMoveBranchLogs_RefusesCollision(t *testing.T) {
 	seedLog(t, data, "proj", "old", "id1")
 	seedLog(t, data, "proj", "new", "id2")
 
-	if err := moveBranchLogs(data, "proj", "old", "new"); err == nil {
+	if err := MoveBranchLogs(data, "proj", "old", "new"); err == nil {
 		t.Fatal("expected refusal when destination logfile exists")
 	}
 }

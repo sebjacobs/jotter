@@ -201,3 +201,47 @@ func TestSidecarInvisibleToLsAndTail(t *testing.T) {
 		t.Errorf("tail leaked sidecar:\n%s", tailOut)
 	}
 }
+
+func TestBranchMv_MovesLogsAndSidecar(t *testing.T) {
+	data := initDataDir(t)
+	repo := initProjectRepo(t, "old")
+	runJotterInRepo(t, repo, data, "write", "--type", "note", "--content", "hi")
+
+	stdout, stderr, code := runJotterInRepo(t, repo, data, "branch", "mv", "old", "new")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "Renamed branch logs") {
+		t.Errorf("unexpected stdout: %s", stdout)
+	}
+	if matches, _ := filepath.Glob(filepath.Join(data, "logs", "*", "old.jsonl")); len(matches) != 0 {
+		t.Errorf("old.jsonl still present: %v", matches)
+	}
+	globOne(t, filepath.Join(data, "logs", "*", "new.jsonl"))
+	globOne(t, filepath.Join(data, "logs", "*", "new.jsonl.id"))
+}
+
+func TestBranchMv_RefusesCollision(t *testing.T) {
+	data := initDataDir(t)
+	repo := initProjectRepo(t, "old")
+	runJotterInRepo(t, repo, data, "write", "--type", "note", "--content", "a")
+	runJotterInRepo(t, repo, data, "write", "--branch", "new", "--type", "note", "--content", "b")
+
+	_, _, code := runJotterInRepo(t, repo, data, "branch", "mv", "old", "new")
+	if code == 0 {
+		t.Fatal("expected non-zero exit when destination logs exist")
+	}
+}
+
+func TestBranch_BareStillPrintsCurrentBranch(t *testing.T) {
+	data := initDataDir(t)
+	repo := initProjectRepo(t, "feature/x")
+
+	stdout, stderr, code := runJotterInRepo(t, repo, data, "branch")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if strings.TrimSpace(stdout) != "feature/x" {
+		t.Errorf("branch = %q, want feature/x", strings.TrimSpace(stdout))
+	}
+}
