@@ -76,6 +76,32 @@ func FindLogByID(dataDir, project, id string) (string, error) {
 	return "", nil
 }
 
+// AnchorBranch records a branch's stable identity: it reuses an existing
+// sidecar id if one is present (e.g. a branch deleted then recreated under the
+// same name), otherwise mints a fresh one, then writes both the git-config
+// anchor in cwd's repo and the sidecar in the data repo. It does not stage or
+// commit — the caller owns that. Returns the id in force.
+func AnchorBranch(dataDir, cwd, project, branch string) (string, error) {
+	sidecar, err := SidecarPath(dataDir, project, branch)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(sidecar), 0o755); err != nil {
+		return "", err
+	}
+	id, _ := ReadSidecar(sidecar)
+	if id == "" {
+		id = NewID()
+	}
+	if err := GitConfigSet(cwd, AnchorConfigKey(branch), id); err != nil {
+		return "", err
+	}
+	if err := WriteSidecar(sidecar, id); err != nil {
+		return "", err
+	}
+	return id, nil
+}
+
 // ReconcileBranch ensures the logfile for (project, branch) is named for the
 // current branch, following a git rename if one happened, and returns the path
 // the caller should append the entry to.
@@ -105,17 +131,7 @@ func ReconcileBranch(dataDir, cwd, project, branch string) (logPath string, warn
 	}
 
 	if id == "" {
-		// Not yet anchored. Adopt an existing sidecar's id if one is somehow
-		// already present (e.g. branch deleted then recreated under the same
-		// name), otherwise mint a fresh one.
-		existing, _ := ReadSidecar(sidecar)
-		if existing == "" {
-			existing = NewID()
-		}
-		if err := GitConfigSet(cwd, AnchorConfigKey(branch), existing); err != nil {
-			return fallback, err
-		}
-		if err := WriteSidecar(sidecar, existing); err != nil {
+		if _, err := AnchorBranch(dataDir, cwd, project, branch); err != nil {
 			return fallback, err
 		}
 		return fallback, nil

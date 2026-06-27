@@ -80,6 +80,23 @@ func GitAdd(dataDir, path string) error {
 	return run(dataDir, "git", "add", path)
 }
 
+// GitLocalBranches returns the local branch names in cwd's repo.
+func GitLocalBranches(cwd string) ([]string, error) {
+	cmd := exec.Command("git", "for-each-ref", "--format=%(refname:short)", "refs/heads")
+	cmd.Dir = cwd
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("listing branches: %w", err)
+	}
+	var branches []string
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line != "" {
+			branches = append(branches, line)
+		}
+	}
+	return branches, nil
+}
+
 // GitMove renames a tracked path within the data repo, staging the rename.
 // from and to are relative to dataDir.
 func GitMove(dataDir, from, to string) error {

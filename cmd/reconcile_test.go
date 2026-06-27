@@ -233,6 +233,54 @@ func TestBranchMv_RefusesCollision(t *testing.T) {
 	}
 }
 
+func TestBranchAdopt_AnchorsExistingBranchesIdempotently(t *testing.T) {
+	data := initDataDir(t)
+	repo := initProjectRepo(t, "main")
+	gitRun(t, repo, "branch", "feature/x")
+	gitRun(t, repo, "branch", "nologs")
+
+	projOut, _, _ := runJotterInRepo(t, repo, data, "project")
+	project := strings.TrimSpace(projOut)
+	logs := filepath.Join(data, "logs", project)
+	if err := os.MkdirAll(logs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{"main.jsonl", "feature+x.jsonl"} {
+		if err := os.WriteFile(filepath.Join(logs, f), []byte("{\"type\": \"note\"}\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	gitRun(t, data, "add", "-A")
+	gitRun(t, data, "commit", "-m", "pre-existing logs")
+
+	stdout, stderr, code := runJotterInRepo(t, repo, data, "branch", "adopt")
+	if code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "Adopted 2") {
+		t.Errorf("want 'Adopted 2', got %q", stdout)
+	}
+	if id := configValue(t, repo, "branch.main.jotter-id"); len(id) != 32 {
+		t.Error("main not anchored")
+	}
+	if id := configValue(t, repo, "branch.feature/x.jotter-id"); len(id) != 32 {
+		t.Error("feature/x not anchored")
+	}
+	if id := configValue(t, repo, "branch.nologs.jotter-id"); id != "" {
+		t.Errorf("branch without logs should be skipped, got %q", id)
+	}
+	globOne(t, filepath.Join(logs, "main.jsonl.id"))
+	globOne(t, filepath.Join(logs, "feature+x.jsonl.id"))
+
+	stdout2, _, _ := runJotterInRepo(t, repo, data, "branch", "adopt")
+	if !strings.Contains(stdout2, "Adopted 0") {
+		t.Errorf("re-run not idempotent, got %q", stdout2)
+	}
+	if status := gitCapture(t, data, "status", "--porcelain"); status != "" {
+		t.Errorf("data repo dirty after idempotent re-run: %q", status)
+	}
+}
+
 func TestBranch_BareStillPrintsCurrentBranch(t *testing.T) {
 	data := initDataDir(t)
 	repo := initProjectRepo(t, "feature/x")
