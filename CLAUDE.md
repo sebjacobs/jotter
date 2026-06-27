@@ -37,8 +37,12 @@ cmd/
   root.go            -> cobra root command, --version wiring, stores skillsFS
   banner.txt         -> ASCII banner embedded into root command Long description
   version.go         -> version/commit/date vars (ldflags-stamped) + formatter
-  write.go           -> append JSONL entry + git commit (+ push on finish)
+  write.go           -> append JSONL entry + git commit (+ push on finish); reconciles branch renames on-branch
   mv.go              -> rename a project's logs dir + git commit the move
+  resolve.go         -> resolve --project/--branch from flags or cwd git; onBranch guard for reconciliation
+  branch.go          -> `jotter branch` parent: prints current branch (bare)
+  branch_mv.go       -> `jotter branch mv` — rename a branch's logs via MoveBranchLogs
+  branch_adopt.go    -> `jotter branch adopt` — anchor existing branches for rename tracking
   tail.go            -> read last N entries, render as markdown
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
@@ -50,7 +54,8 @@ internal/
   config.go          -> resolve data dir by walking up from cwd for .jotter TOML files; falls back to ~/.jotter
   entry.go           -> Entry struct, JSONL marshal (Python-compatible spacing), markdown format
   storage.go         -> path construction, branch sanitisation (/ -> +), glob collection
-  git.go             -> git add/commit/push/fetch/pull-rebase + ahead-behind via exec.Command
+  branchid.go        -> branch-rename tracking: id anchor + sidecar, AnchorBranch, ReconcileBranch, MoveBranchLogs
+  git.go             -> git add/commit/push/fetch/pull-rebase/config + ahead-behind via exec.Command
   color.go           -> TTY-aware ANSI colouring helpers
   setup/
     wizard.go        -> Step interface, State/Status enums, Context, Prompter, Run driver
@@ -62,6 +67,7 @@ internal/
 
 - JSONL uses Python `json.dumps` spacing (`, ` and `: ` separators) for data repo compatibility
 - Branch names sanitised: `/` replaced with `+` in filenames
+- Branch identity: a stable id lives in the project repo's git config (`branch.<name>.jotter-id`, survives `git branch -m`) and in a `<branch>.jsonl.id` sidecar; lets renames be followed. Sidecars are invisible to the `*.jsonl` globs
 - Entry types: `start`, `checkpoint`, `note`, `break`, `finish`
 - Git commit message format: `session: {project}/{branch} {type} {timestamp}`
 - `finish` entries trigger git push (non-fatal on failure)

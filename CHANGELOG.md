@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Automatic branch-rename tracking. Logs are stored one file per branch, so `git branch -m` previously orphaned a branch's history under the old name. Jotter now stamps a stable id in the project repo's git config (`branch.<name>.jotter-id`, which survives the rename) plus a `<branch>.jsonl.id` sidecar on first write; the next write after a rename moves the logfile into place so history stays continuous. Best-effort and scoped to on-branch writes — scripted and cross-project writes are unaffected.
+- `jotter branch mv <old> <new>` — the manual counterpart, for renaming a branch's logs when you won't write to it again. Moves `logs/<project>/<old>.jsonl` (and its sidecar) to `<new>` and commits, refusing to overwrite an existing destination.
+- `jotter branch adopt` — anchor every existing local branch that has logs but isn't tracked yet, so a rename before the branch's next write is still followed. Idempotent; run once per repo to migrate pre-existing history.
+
 ## [v0.12.0] — 2026-06-27
 
 ### Changed
