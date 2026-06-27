@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.11.0] — 2026-06-27
+
 ### Added
 - `jotter mv <old-project> <new-project>` — rename a project's logs. A project's jotter name is the basename of its git toplevel, so renaming the project directory on disk orphans its logs under the old name; `mv` renames `logs/<old-project>` to `logs/<new-project>` and commits the move (locally, like every entry except `finish`). Refuses to overwrite an existing destination, validates both names against path traversal, and is what `proj mv`'s log migration delegates to.
 
@@ -128,7 +130,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.11.0...HEAD
+[v0.11.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.11.0
 [v0.10.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.10.0
 [v0.9.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.9.0
 [v0.8.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.8.0
