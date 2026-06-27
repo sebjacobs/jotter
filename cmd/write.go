@@ -117,13 +117,6 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("git commit: %w", err)
 	}
 
-	if entryType == "finish" && internal.GitHasRemote(dataDir) {
-		if err := internal.GitPush(dataDir); err != nil {
-			// Push failure is non-fatal — warn but don't fail
-			fmt.Fprintf(os.Stderr, "Warning: git push failed: %v\n", err)
-		}
-	}
-
 	fmt.Printf("Wrote %s entry to %s\n", internal.ColorType(entryType), internal.Dim(rel))
 	return nil
 }

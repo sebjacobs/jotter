@@ -177,16 +177,25 @@ func TestWrite_NextFieldAbsent(t *testing.T) {
 	}
 }
 
-func TestWrite_FinishWithoutRemote_SkipsPushSilently(t *testing.T) {
-	dir := initDataDir(t)
+func TestWrite_FinishCommitsLocallyWithoutPushing(t *testing.T) {
+	dir, bare := initDataDirWithRemote(t)
+	remoteBefore := git(t, bare, "log", "--oneline")
+
 	stdout, stderr, code := runJotter(t, dir,
 		"write", "--project", "proj", "--branch", "main",
 		"--type", "finish", "--content", "Done")
 	if code != 0 {
 		t.Fatalf("exit code %d, stdout: %s stderr: %s", code, stdout, stderr)
 	}
-	if strings.Contains(stderr, "git push failed") {
-		t.Errorf("expected no push-failure warning when no remote configured, got stderr: %s", stderr)
+	if strings.Contains(stderr, "push") {
+		t.Errorf("finish should not push inline, got stderr: %s", stderr)
+	}
+
+	if local := git(t, dir, "log", "--oneline"); !strings.Contains(local, "session: proj/main finish") {
+		t.Errorf("finish entry was not committed locally: %s", local)
+	}
+	if remoteAfter := git(t, bare, "log", "--oneline"); remoteAfter != remoteBefore {
+		t.Errorf("finish pushed inline — remote changed:\nbefore: %s\nafter:  %s", remoteBefore, remoteAfter)
 	}
 }
 
