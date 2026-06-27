@@ -41,6 +41,7 @@ func runSetup(cmd *cobra.Command, _ []string) error {
 		Prompter: &huhPrompter{},
 		Answers:  &setup.Answers{},
 		Out:      cmd.OutOrStdout(),
+		Daemon:   daemonManager{},
 	}
 
 	_, _ = fmt.Fprintln(ctx.Out, strings.TrimRight(banner, "\n"))

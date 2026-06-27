@@ -37,7 +37,7 @@ cmd/
   root.go            -> cobra root command, --version wiring, stores skillsFS
   banner.txt         -> ASCII banner embedded into root command Long description
   version.go         -> version/commit/date vars (ldflags-stamped) + formatter
-  write.go           -> append JSONL entry + git commit (+ push on finish); reconciles branch renames on-branch
+  write.go           -> append JSONL entry + git commit (local only; push is async); registers the data dir; reconciles branch renames on-branch
   mv.go              -> rename a project's logs dir + git commit the move
   resolve.go         -> resolve --project/--branch from flags or cwd git; onBranch guard for reconciliation
   branch.go          -> `jotter branch` parent: prints current branch (bare)
@@ -46,20 +46,24 @@ cmd/
   tail.go            -> read last N entries, render as markdown
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
-  sync.go            -> fetch + rebase + push to recover from a failed finish push
+  sync.go            -> fetch + rebase + push; --all walks the registry (skips remoteless repos); syncDataDir + indentWriter for nested per-repo output
+  daemon.go          -> `jotter daemon` parent + install/uninstall/status wiring; daemonManager adapts to setup.DaemonManager; renderPlist lives in daemon_darwin.go
+  daemon_darwin.go   -> launchd impl: plist render/write, launchctl load/unload, install/uninstall/status, daemonInstalled (build tag: darwin)
+  daemon_other.go    -> non-darwin stubs returning "macOS only" (build tag: !darwin)
   config.go          -> print resolved .jotter data_dir for current cwd
   completion.go      -> bash/zsh/fish completion generator
-  setup.go           -> `jotter setup` wizard driver; huhPrompter (huh-backed Prompter impl)
+  setup.go           -> `jotter setup` wizard driver; huhPrompter (huh-backed Prompter impl); injects daemonManager
 internal/
   config.go          -> resolve data dir by walking up from cwd for .jotter TOML files; falls back to ~/.jotter
   entry.go           -> Entry struct, JSONL marshal (Python-compatible spacing), markdown format
   storage.go         -> path construction, branch sanitisation (/ -> +), glob collection
   branchid.go        -> branch-rename tracking: id anchor + sidecar, AnchorBranch, ReconcileBranch, MoveBranchLogs
+  registry.go        -> global registry of data dirs (~/.jotter.d/registry); RegisterDataDir/RegisteredDataDirs; StateDir ($JOTTER_STATE_DIR override) for sync --all + daemon log
   git.go             -> git add/commit/push/fetch/pull-rebase/config + ahead-behind via exec.Command
   color.go           -> TTY-aware ANSI colouring helpers
   setup/
-    wizard.go        -> Step interface, State/Status enums, Context, Prompter, Run driver
-    steps.go         -> seven Step implementations + DefaultSteps()
+    wizard.go        -> Step interface, State/Status enums, Context, Prompter, DaemonManager, Run driver
+    steps.go         -> eight Step implementations + DefaultSteps() (incl. daemonStep)
     settings.go      -> MergePermission for ~/.claude/settings.json
 ```
 
@@ -70,7 +74,7 @@ internal/
 - Branch identity: a stable id lives in the project repo's git config (`branch.<name>.jotter-id`, survives `git branch -m`) and in a `<branch>.jsonl.id` sidecar; lets renames be followed. Sidecars are invisible to the `*.jsonl` globs
 - Entry types: `start`, `checkpoint`, `note`, `break`, `finish`
 - Git commit message format: `session: {project}/{branch} {type} {timestamp}`
-- `finish` entries trigger git push (non-fatal on failure)
+- Writes commit locally only; pushing is asynchronous — the launchd timer (`jotter daemon`) runs `jotter sync --all` over every registered data repo on an interval. `jotter sync` forces a push now
 - Exit code 1 for user-facing errors (missing files, no results, invalid input)
 
 ## Release

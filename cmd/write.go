@@ -53,6 +53,10 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	if regErr := internal.RegisterDataDir(dataDir); regErr != nil {
+		fmt.Fprintf(os.Stderr, "Warning: could not register data dir for background push: %v\n", regErr)
+	}
+
 	path, err := internal.JSONLPath(dataDir, project, branch)
 	if err != nil {
 		return err
@@ -111,13 +115,6 @@ func runWrite(cmd *cobra.Command, args []string) error {
 	}
 	if err := internal.GitCommit(dataDir, path, commitMsg); err != nil {
 		return fmt.Errorf("git commit: %w", err)
-	}
-
-	if entryType == "finish" && internal.GitHasRemote(dataDir) {
-		if err := internal.GitPush(dataDir); err != nil {
-			// Push failure is non-fatal — warn but don't fail
-			fmt.Fprintf(os.Stderr, "Warning: git push failed: %v\n", err)
-		}
 	}
 
 	fmt.Printf("Wrote %s entry to %s\n", internal.ColorType(entryType), internal.Dim(rel))

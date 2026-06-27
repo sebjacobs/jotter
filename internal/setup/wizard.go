@@ -63,6 +63,12 @@ type Context struct {
 	Answers    *Answers // accumulated user input across steps
 	Out        io.Writer
 
+	// Daemon manages the launchd background push timer. It's injected by the
+	// cmd layer (which owns the launchd specifics) so the setup package stays
+	// platform-agnostic. Nil when daemon management is unavailable — the daemon
+	// step then reports NotApplicable, which is also how tests opt out.
+	Daemon DaemonManager
+
 	// Changed is set to true by the runner when any step returns StatusUpdated.
 	// Later steps (remote, smoke) check it so that re-running the wizard on a
 	// healthy install is a no-op — no prompts, no file writes, no git commits.
@@ -84,6 +90,15 @@ func (c *Context) skillsRoot() string {
 type Answers struct {
 	DataDir   string
 	RemoteURL string // optional; empty = user skipped
+}
+
+// DaemonManager installs and inspects the background push timer. The cmd layer
+// provides the real (launchd) implementation; tests inject a stub.
+type DaemonManager interface {
+	// Installed reports whether the push timer is already installed.
+	Installed() bool
+	// Install installs (or reinstalls) the push timer, writing progress to out.
+	Install(out io.Writer) error
 }
 
 // Prompter is the interface steps use to ask the user questions. Production
