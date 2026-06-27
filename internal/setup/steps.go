@@ -6,12 +6,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/sebjacobs/jotter/internal"
 )
 
-// DefaultSteps returns the seven-step wizard sequence in execution order.
+// DefaultSteps returns the wizard sequence in execution order.
 func DefaultSteps() []Step {
 	return []Step{
 		&claudeStep{},
@@ -21,6 +22,7 @@ func DefaultSteps() []Step {
 		&skillsStep{},
 		&permissionStep{},
 		&smokeStep{},
+		&daemonStep{},
 	}
 }
 
@@ -377,6 +379,43 @@ func cleanupSmokeArtefacts(dataDir, project, branch string) error {
 		return fmt.Errorf("committing cleanup: %w", err)
 	}
 	return nil
+}
+
+// --- step 8: background push timer ---
+
+type daemonStep struct{}
+
+func (daemonStep) Name() string { return "push timer" }
+
+// Detect gates the step to environments where it makes sense: macOS (launchd),
+// with a daemon manager injected, and a remote configured — a remote-less data
+// repo never pushes, so a background pusher would do nothing. When the timer is
+// already installed, re-running is a no-op.
+func (daemonStep) Detect(ctx *Context) (State, error) {
+	if ctx.Daemon == nil || runtime.GOOS != "darwin" {
+		return NotApplicable, nil
+	}
+	if ctx.Answers.RemoteURL == "" {
+		return NotApplicable, nil
+	}
+	if ctx.Daemon.Installed() {
+		return AlreadyDone, nil
+	}
+	return NeedsRun, nil
+}
+
+func (daemonStep) Run(ctx *Context) (Result, error) {
+	install, err := ctx.Prompter.Confirm("Install the background push timer so finishes push automatically?", true)
+	if err != nil {
+		return Result{}, err
+	}
+	if !install {
+		return Result{Status: StatusSkipped, Message: "skipped the background push timer (run `jotter daemon install` later)"}, nil
+	}
+	if err := ctx.Daemon.Install(ctx.Out); err != nil {
+		return Result{}, err
+	}
+	return Result{Status: StatusUpdated, Message: "installed the launchd push timer"}, nil
 }
 
 // --- helpers ---

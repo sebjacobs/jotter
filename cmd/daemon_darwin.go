@@ -54,6 +54,16 @@ func plistPath() (string, error) {
 	return filepath.Join(home, "Library", "LaunchAgents", daemonLabel+".plist"), nil
 }
 
+// daemonInstalled reports whether the LaunchAgent plist exists on disk.
+func daemonInstalled() bool {
+	plist, err := plistPath()
+	if err != nil {
+		return false
+	}
+	_, statErr := os.Stat(plist)
+	return statErr == nil
+}
+
 // daemonLogPath returns the file launchd writes the job's stdout/stderr to.
 func daemonLogPath() (string, error) {
 	stateDir, err := internal.StateDir()

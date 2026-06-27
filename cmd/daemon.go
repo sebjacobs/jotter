@@ -2,9 +2,19 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/spf13/cobra"
 )
+
+// daemonManager adapts the platform daemon functions to setup.DaemonManager,
+// letting the setup wizard offer to install the push timer without importing
+// the launchd specifics.
+type daemonManager struct{}
+
+func (daemonManager) Installed() bool { return daemonInstalled() }
+
+func (daemonManager) Install(out io.Writer) error { return installDaemon(out, defaultInterval) }
 
 // defaultInterval is how often, in seconds, the background job runs `sync --all`.
 const defaultInterval = 300
