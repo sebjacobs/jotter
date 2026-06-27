@@ -2,6 +2,7 @@ package internal
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -39,6 +40,28 @@ func GitCurrentBranch(cwd string) (string, error) {
 		return "", fmt.Errorf("detached HEAD — pass --branch explicitly")
 	}
 	return branch, nil
+}
+
+// GitConfigGet reads a git config value scoped to the repo at cwd. An unset key
+// (where `git config --get` exits 1) returns "" with a nil error; any other
+// failure returns the error.
+func GitConfigGet(cwd, key string) (string, error) {
+	cmd := exec.Command("git", "config", "--get", key)
+	cmd.Dir = cwd
+	out, err := cmd.Output()
+	if err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) && exitErr.ExitCode() == 1 {
+			return "", nil
+		}
+		return "", fmt.Errorf("git config --get %s: %w", key, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// GitConfigSet writes a git config value scoped to the repo at cwd.
+func GitConfigSet(cwd, key, value string) error {
+	return run(cwd, "git", "config", key, value)
 }
 
 // GitCommit stages a file and commits it in the data repo.
