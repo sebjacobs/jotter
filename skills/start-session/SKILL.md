@@ -24,7 +24,7 @@ BRANCH=$(jotter branch)
 jotter tail --project "$PROJECT" --branch "$BRANCH" --limit 1
 ```
 
-If the last entry is **not** a `finish` (i.e. it's a `start`, `checkpoint`, or `break`), the previous session likely crashed or skipped `/finish`. Offer to run `/recover` before continuing.
+If the last entry is **not** a `stop` (or the legacy `finish`) — i.e. it's a `start`, `checkpoint`, or `break` — the previous session likely crashed or skipped `/stop`. Offer to run `/recover` before continuing.
 
 ### 3 — Restore context from the log
 
@@ -48,7 +48,7 @@ jotter tail --project "$PROJECT" --branch main --limit 3
 
 If neither exists, skip to step 4 — no prior context to restore.
 
-Surface the most recent finish entry's `**Next:**` field — that's the handover prompt from the last session.
+Surface the most recent `stop` (or legacy `finish`) entry's `**Next:**` field — that's the handover prompt from the last session.
 
 ### 4 — Write the start entry
 

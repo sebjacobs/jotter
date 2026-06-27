@@ -1,11 +1,11 @@
 ---
 name: recover-session
-description: Recover context from a crashed or unfinished session by reading the most recent JSONL transcript. Use when the user says "/recover", "recover session", "what was I doing", or when /start detects the last entry isn't a finish.
+description: Recover context from a crashed or unfinished session by reading the most recent JSONL transcript. Use when the user says "/recover", "recover session", "what was I doing", or when /start detects the last entry isn't a stop.
 ---
 
 # Recover Session
 
-Reconstructs what happened in a session that ended without `/finish` — reads Claude Code's JSONL transcript and writes a recovery entry to the session log.
+Reconstructs what happened in a session that ended without `/stop` — reads Claude Code's JSONL transcript and writes a recovery entry to the session log.
 
 ---
 
@@ -26,7 +26,7 @@ Check the last session log entry:
 jotter tail --project "$PROJECT" --branch "$BRANCH" --limit 1
 ```
 
-If the last entry is a `finish`, the session ended cleanly — nothing to recover. Tell the user and stop.
+If the last entry is a `stop` (or the legacy `finish`), the session ended cleanly — nothing to recover. Tell the user and stop.
 
 If the last entry is a `checkpoint` or `break`, the session was intentionally paused — `checkpoint` via `/save` (typically before `/clear` to trim context), `break` via `/break` (stepping away briefly). Neither is a crash. Show the entry to the user and stop; they can continue the session normally. Only proceed if the user explicitly says the session crashed or if the entry is clearly stale (e.g. >24h old with no further activity).
 
@@ -59,12 +59,12 @@ From the extracted conversation, synthesise a recovery entry:
 jotter write \
   --project "$PROJECT" \
   --branch "$BRANCH" \
-  --type finish \
+  --type stop \
   --content "<what was built/fixed, key decisions, where things stopped>" \
   --next "<priorities inferred from the session trajectory>"
 ```
 
-Use `--type finish` so the log correctly marks the session as closed.
+Use `--type stop` so the log correctly marks the session as closed.
 
 ### 4 — Report
 

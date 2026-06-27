@@ -11,6 +11,7 @@ var (
 // typeColors maps entry types to their display color.
 var typeColors = map[string]*color.Color{
 	"start":      color.New(color.FgGreen),
+	"stop":       color.New(color.FgBlue),
 	"finish":     color.New(color.FgBlue),
 	"break":      color.New(color.FgYellow),
 	"checkpoint": color.New(color.FgCyan),

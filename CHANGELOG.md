@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `handover` entry type and bundled `handover` skill — distil a finished feature branch's log into a single entry written onto `main`, so its context survives the branch being deleted. A branch's log is keyed by branch name and becomes undiscoverable once the branch is merged and removed; `handover` captures the branch's arc (what was built, key decisions, surviving follow-ups) with a pointer back to the source branch. Like every entry it commits locally and is pushed asynchronously by the background timer.
 
+### Changed
+- The session-end entry type is now `stop`, renamed from `finish` (`/finish` overclaimed completion — you stop a branch for the day, you don't finish it, and `handover` now carries the "done for good" meaning). The bundled `finish-session` skill becomes `stop-session`, triggered by `/stop` and phrasings like "let's stop for today". `finish` stays a fully accepted legacy alias — old logs read fine, `jotter write --type finish` still works, and `/finish` still triggers the skill — so nothing breaks. Note: `jotter setup` installs `stop-session` alongside the now-orphaned `finish-session`; remove the old skill directory by hand if you want it gone.
+
 ## [v0.14.0] — 2026-06-27
 
 ### Added

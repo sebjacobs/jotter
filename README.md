@@ -16,7 +16,7 @@ Jotter gives each session a durable log of its own: structured checkpoints commi
 
 ## How it works
 
-- **In Claude Code**, you type `/start`, `/save`, `/break`, `/finish`, or `/recover`. The skills (installed by `jotter setup`) handle the rest — they know what to capture and call `jotter write` for you.
+- **In Claude Code**, you type `/start`, `/save`, `/break`, `/stop`, or `/recover`. The skills (installed by `jotter setup`) handle the rest — they know what to capture and call `jotter write` for you.
 - **Entries land as JSONL** in a separate git repo, one file per project/branch. One commit per entry. Pushing to the remote happens asynchronously — a background timer (`jotter daemon`) pushes every logged repo on an interval, so writes never block on the network.
 - **To look back**, use `jotter tail` to replay a branch, `jotter ls` to browse what's been logged, or `jotter search` to grep across everything — by project, branch, type, or date.
 
@@ -58,21 +58,22 @@ Once `jotter` is on your PATH, the fastest way to wire it into Claude Code is th
 jotter setup
 ```
 
-It takes you through seven steps in one go — detects Claude Code, prompts for a data directory (default `~/session-logs-data`), initialises it as a git repo, optionally wires a git remote, writes your `~/.jotter` config, installs the session-management skills (`/start`, `/save`, `/finish`, `/break`, `/recover`), grants the `Bash(jotter:*)` permission in `~/.claude/settings.json`, and runs a write-and-read-back smoke test. Re-running is idempotent — it detects existing state and only updates what's changed.
+It takes you through seven steps in one go — detects Claude Code, prompts for a data directory (default `~/session-logs-data`), initialises it as a git repo, optionally wires a git remote, writes your `~/.jotter` config, installs the session-management skills (`/start`, `/save`, `/stop`, `/break`, `/recover`, `/handover`), grants the `Bash(jotter:*)` permission in `~/.claude/settings.json`, and runs a write-and-read-back smoke test. Re-running is idempotent — it detects existing state and only updates what's changed.
 
 If you'd rather wire things up by hand, the `Configuration` section below describes the same artefacts the wizard produces.
 
 ## Using jotter from Claude Code
 
-The primary interface is the five session-management skills — you don't call `jotter write` by hand during a session.
+The primary interface is the session-management skills — you don't call `jotter write` by hand during a session.
 
-| Command    | When you use it |
-|------------|-----------------|
-| `/start`   | Beginning a session. Reads recent logs, proposes a goal, writes a `start` entry. |
-| `/save`    | Mid-session checkpoint. Jot down a decision, a finding, or progress. |
-| `/break`   | Stepping away. Snapshots state so you can pick up cleanly. |
-| `/finish`  | Wrapping up. Writes a summary and records what's next (the push happens in the background). |
-| `/recover` | Picking up a crashed or unfinished session. Reconstructs context from the last entries. |
+| Command     | When you use it |
+|-------------|-----------------|
+| `/start`    | Beginning a session. Reads recent logs, proposes a goal, writes a `start` entry. |
+| `/save`     | Mid-session checkpoint. Jot down a decision, a finding, or progress. |
+| `/break`    | Stepping away. Snapshots state so you can pick up cleanly. |
+| `/stop`     | Wrapping up a session (formerly `/finish`, still accepted). Writes a summary and records what's next (the push happens in the background). |
+| `/handover` | A feature branch is done for good. Distils its log onto `main` so the context survives deleting the branch. |
+| `/recover`  | Picking up a crashed or unfinished session. Reconstructs context from the last entries. |
 
 A typical day:
 
@@ -82,10 +83,10 @@ A typical day:
 /save           # "refresh-token flow implemented, tests passing"
 ...more work, hit a blocker...
 /save           # "blocked on the cookie-vs-header decision — see note"
-/finish         # writes summary, records 'cookie vs header: decide next session'
+/stop           # writes summary, records 'cookie vs header: decide next session'
 ```
 
-Next session, `/start` reads that `finish` entry and reminds you where you were.
+Next session, `/start` reads that `stop` entry and reminds you where you were.
 
 ## CLI reference
 
@@ -97,10 +98,10 @@ Append a session log entry.
 
 ```bash
 jotter write --project myapp --branch feature/auth --type start --content "Working on OAuth flow"
-jotter write --project myapp --branch feature/auth --type finish --content "OAuth complete" --next "Add refresh token support"
+jotter write --project myapp --branch feature/auth --type stop --content "OAuth complete" --next "Add refresh token support"
 ```
 
-Entry types: `start`, `checkpoint`, `note`, `break`, `finish`, `handover`.
+Entry types: `start`, `checkpoint`, `note`, `break`, `stop`, `handover`. (`finish` is a legacy alias for `stop`, still accepted.)
 
 The `--next` flag records what to pick up next session. Writes only commit locally — the remote is updated asynchronously by the background timer (see `daemon` below), or on demand with `jotter sync`.
 
@@ -150,9 +151,9 @@ jotter ls --project myapp --branch feature/auth        # entries on that branch,
 A typical `ls --project --branch` run looks like:
 
 ```
-2026-04-11 12:00  finish      OAuth flow — initial implementation done, tests green.
+2026-04-11 12:00  stop        OAuth flow — initial implementation done, tests green.
 2026-04-14 21:49  checkpoint  Refresh-token spike complete — committed. Rotation handling next.
-2026-04-16 15:45  finish      PR merged — OAuth end-to-end shipped.
+2026-04-16 15:45  stop        PR merged — OAuth end-to-end shipped.
 ```
 
 Titles are extracted from the first non-empty line of each entry's content, with basic markdown markers stripped.
@@ -163,7 +164,7 @@ Search entries across all logs.
 
 ```bash
 jotter search "OAuth"                                          # search all logs
-jotter search --project myapp --type finish                    # all finish entries in myapp
+jotter search --project myapp --type stop                      # all stop entries in myapp
 jotter search --since 2026-04-01                               # entries from April onwards
 jotter search "deploy" --project myapp --branch main           # scoped search
 ```
@@ -255,7 +256,7 @@ Each line is a JSON object:
 
 ```json
 {"timestamp": "2026-04-15T10:30:00", "type": "start", "content": "Working on OAuth flow"}
-{"timestamp": "2026-04-15T11:45:00", "type": "finish", "content": "OAuth complete", "next": "Add refresh token support"}
+{"timestamp": "2026-04-15T11:45:00", "type": "stop", "content": "OAuth complete", "next": "Add refresh token support"}
 ```
 
 JSON uses Python-compatible spacing (`, ` and `: ` separators) for compatibility with the original Python implementation.

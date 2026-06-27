@@ -22,7 +22,8 @@ var rootCmd = &cobra.Command{
 		"Jot it, keep it, find it later.\n\n" +
 		"An append-only log of your Claude Code sessions, stored as JSONL in a git repo " +
 		"outside your project tree. Entries are human-curated checkpoints — start, note, " +
-		"checkpoint, break, finish — committed one per write and pushed on finish. Use " +
+		"checkpoint, break, stop, handover — committed one per write and pushed to the " +
+		"remote asynchronously by the background timer. Use " +
 		"`tail` to replay a branch, `search` to grep across projects, and `ls` to browse " +
 		"what's been logged.",
 	Version: versionString(),

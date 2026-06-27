@@ -32,7 +32,7 @@ Local builds get placeholder version info (`dev` / `none` / `unknown`). Release 
 
 ```
 main.go              -> //go:embed all:skills into skillsFS; cmd.Execute(skillsFS)
-skills/              -> embedded session-management SKILL.md files (start, save, finish, break, recover, handover) — installed by `jotter setup`
+skills/              -> embedded session-management SKILL.md files (start, save, stop, break, recover, handover) — installed by `jotter setup`
 cmd/
   root.go            -> cobra root command, --version wiring, stores skillsFS
   banner.txt         -> ASCII banner embedded into root command Long description
@@ -72,7 +72,7 @@ internal/
 - JSONL uses Python `json.dumps` spacing (`, ` and `: ` separators) for data repo compatibility
 - Branch names sanitised: `/` replaced with `+` in filenames
 - Branch identity: a stable id lives in the project repo's git config (`branch.<name>.jotter-id`, survives `git branch -m`) and in a `<branch>.jsonl.id` sidecar; lets renames be followed. Sidecars are invisible to the `*.jsonl` globs
-- Entry types: `start`, `checkpoint`, `note`, `break`, `finish`, `handover` (branch-end distillation written onto `main`)
+- Entry types: `start`, `checkpoint`, `note`, `break`, `stop` (session-end; `finish` is a legacy alias still accepted), `handover` (branch-end distillation written onto `main`)
 - Git commit message format: `session: {project}/{branch} {type} {timestamp}`
 - Writes commit locally only; pushing is asynchronous — the launchd timer (`jotter daemon`) runs `jotter sync --all` over every registered data repo on an interval. `jotter sync` forces a push now
 - Exit code 1 for user-facing errors (missing files, no results, invalid input)

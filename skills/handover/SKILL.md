@@ -9,7 +9,7 @@ A feature branch's jotter log is keyed by branch. When the branch is merged and 
 
 **Run this while the feature branch is still known** — ideally still checked out, before the branch is deleted.
 
-**Not the end of a branch, just the end of a session?** Use `finish` instead. `handover` is a higher-order event: you may `finish` a branch many times, then `handover` once when it's done for good.
+**Not the end of a branch, just the end of a session?** Use `stop` instead. `handover` is a higher-order event: you may `stop` a branch many times, then `handover` once when it's done for good.
 
 ---
 
@@ -38,7 +38,7 @@ If the branch is long-lived, widen with search rather than truncating:
 jotter search --project "$PROJECT" --branch "$BRANCH" ""
 ```
 
-The most recent `finish` entry's `**Next:**` field is a good seed for what's still outstanding.
+The most recent `stop` (or legacy `finish`) entry's `**Next:**` field is a good seed for what's still outstanding.
 
 ### 3 — Distil and preview
 
