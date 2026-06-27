@@ -7,6 +7,27 @@ import (
 	"testing"
 )
 
+func TestDaemonLabel_DefaultsToNeutralPrefix(t *testing.T) {
+	t.Setenv("LAUNCHD_PREFIX", "")
+	if got := daemonLabel(); got != "com.jotter" {
+		t.Errorf("daemonLabel() = %q, want com.jotter", got)
+	}
+}
+
+func TestDaemonLabel_HonoursLaunchdPrefix(t *testing.T) {
+	t.Setenv("LAUNCHD_PREFIX", "com.example")
+	if got := daemonLabel(); got != "com.example.jotter" {
+		t.Errorf("daemonLabel() = %q, want com.example.jotter", got)
+	}
+}
+
+func TestDaemonLabel_TrimsTrailingDotAndSpace(t *testing.T) {
+	t.Setenv("LAUNCHD_PREFIX", " com.example. ")
+	if got := daemonLabel(); got != "com.example.jotter" {
+		t.Errorf("daemonLabel() = %q, want com.example.jotter", got)
+	}
+}
+
 func TestRenderPlist_IncludesProgramArgumentsAndInterval(t *testing.T) {
 	got := renderPlist("com.jotter.push", "/usr/local/bin/jotter", []string{"sync", "--all"}, 300, "/Users/x/.jotter.d/daemon.log")
 

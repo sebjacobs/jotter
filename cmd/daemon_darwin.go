@@ -13,8 +13,17 @@ import (
 	"github.com/sebjacobs/jotter/internal"
 )
 
-// daemonLabel is the launchd job label and the plist basename.
-const daemonLabel = "com.jotter.push"
+// daemonLabel returns the launchd job label (and plist basename). It honours
+// $LAUNCHD_PREFIX so the agent slots into an existing launchd naming scheme —
+// e.g. a service manager that globs one reverse-DNS prefix — producing
+// "<prefix>.jotter". Unset, it defaults to the neutral "com.jotter".
+func daemonLabel() string {
+	prefix := strings.TrimRight(strings.TrimSpace(os.Getenv("LAUNCHD_PREFIX")), ".")
+	if prefix == "" {
+		prefix = "com"
+	}
+	return prefix + ".jotter"
+}
 
 // renderPlist builds a launchd LaunchAgent plist that runs execPath with args
 // every interval seconds, logging stdout and stderr to logPath.
@@ -51,7 +60,7 @@ func plistPath() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("locating home directory: %w", err)
 	}
-	return filepath.Join(home, "Library", "LaunchAgents", daemonLabel+".plist"), nil
+	return filepath.Join(home, "Library", "LaunchAgents", daemonLabel()+".plist"), nil
 }
 
 // daemonInstalled reports whether the LaunchAgent plist exists on disk.
@@ -99,7 +108,7 @@ func installDaemon(out io.Writer, interval int) error {
 		return fmt.Errorf("creating LaunchAgents dir: %w", err)
 	}
 
-	body := renderPlist(daemonLabel, exe, []string{"sync", "--all"}, interval, logPath)
+	body := renderPlist(daemonLabel(), exe, []string{"sync", "--all"}, interval, logPath)
 	if err := os.WriteFile(plist, []byte(body), 0o644); err != nil {
 		return fmt.Errorf("writing plist: %w", err)
 	}
@@ -145,12 +154,13 @@ func statusDaemon(out io.Writer) error {
 		return nil
 	}
 
-	loaded := exec.Command("launchctl", "list", daemonLabel).Run() == nil
+	loaded := exec.Command("launchctl", "list", daemonLabel()).Run() == nil
 	state := internal.Dim("installed but not loaded")
 	if loaded {
 		state = internal.Bold("loaded")
 	}
 	_, _ = fmt.Fprintf(out, "Background push timer: %s\n", state)
+	_, _ = fmt.Fprintf(out, "Label: %s\n", internal.Dim(daemonLabel()))
 	_, _ = fmt.Fprintf(out, "Plist: %s\n", internal.Dim(plist))
 
 	logPath, err := daemonLogPath()
