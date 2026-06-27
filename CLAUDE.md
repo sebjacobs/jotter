@@ -38,6 +38,7 @@ cmd/
   banner.txt         -> ASCII banner embedded into root command Long description
   version.go         -> version/commit/date vars (ldflags-stamped) + formatter
   write.go           -> append JSONL entry + git commit (+ push on finish)
+  mv.go              -> rename a project's logs dir + git commit the move
   tail.go            -> read last N entries, render as markdown
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope

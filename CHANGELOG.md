@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `jotter mv <old-project> <new-project>` — rename a project's logs. A project's jotter name is the basename of its git toplevel, so renaming the project directory on disk orphans its logs under the old name; `mv` renames `logs/<old-project>` to `logs/<new-project>` and commits the move (locally, like every entry except `finish`). Refuses to overwrite an existing destination, validates both names against path traversal, and is what `proj mv`'s log migration delegates to.
+
 ## [v0.10.0] — 2026-06-19
 
 ### Added

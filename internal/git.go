@@ -52,6 +52,24 @@ func GitCommit(dataDir, filePath, message string) error {
 	return nil
 }
 
+// GitMove renames a tracked path within the data repo, staging the rename.
+// from and to are relative to dataDir.
+func GitMove(dataDir, from, to string) error {
+	if err := run(dataDir, "git", "mv", from, to); err != nil {
+		return fmt.Errorf("git mv: %w", err)
+	}
+	return nil
+}
+
+// GitCommitStaged commits whatever is already staged in the data repo. Pairs
+// with GitMove, whose rename git has already added to the index.
+func GitCommitStaged(dataDir, message string) error {
+	if err := run(dataDir, "git", "commit", "-m", message); err != nil {
+		return fmt.Errorf("git commit: %w", err)
+	}
+	return nil
+}
+
 // GitPush pushes the data repo to its remote. On a branch that has no upstream
 // configured yet (e.g. a freshly `jotter setup` repo whose first push never
 // landed), it pushes with -u so the tracking branch is set and later pushes are

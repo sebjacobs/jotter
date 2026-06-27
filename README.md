@@ -104,6 +104,16 @@ Entry types: `start`, `checkpoint`, `note`, `break`, `finish`.
 
 The `--next` flag records what to pick up next session. Finish entries also trigger a git push.
 
+### mv
+
+Rename a project's logs.
+
+```bash
+jotter mv old-name new-name
+```
+
+A project's jotter name is the basename of its git toplevel, so renaming the project directory orphans its logs under the old name. `mv` renames `logs/<old-name>` to `logs/<new-name>` and commits the move locally (it refuses to overwrite an existing destination).
+
 ### tail
 
 Show recent entries for a branch.
