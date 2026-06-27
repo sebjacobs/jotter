@@ -199,6 +199,29 @@ func TestWrite_FinishCommitsLocallyWithoutPushing(t *testing.T) {
 	}
 }
 
+func TestWrite_HandoverCommitsLocallyWithoutPushing(t *testing.T) {
+	dir, bare := initDataDirWithRemote(t)
+	remoteBefore := git(t, bare, "log", "--oneline")
+
+	stdout, stderr, code := runJotter(t, dir,
+		"write", "--project", "proj", "--branch", "main",
+		"--type", "handover", "--content", "From feature/auth — OAuth shipped",
+		"--next", "Add refresh-token support")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s stderr: %s", code, stdout, stderr)
+	}
+	if strings.Contains(stderr, "push") {
+		t.Errorf("handover should not push inline, got stderr: %s", stderr)
+	}
+
+	if local := git(t, dir, "log", "--oneline"); !strings.Contains(local, "session: proj/main handover") {
+		t.Errorf("handover entry was not committed locally: %s", local)
+	}
+	if remoteAfter := git(t, bare, "log", "--oneline"); remoteAfter != remoteBefore {
+		t.Errorf("handover pushed inline — remote changed:\nbefore: %s\nafter:  %s", remoteBefore, remoteAfter)
+	}
+}
+
 func TestWrite_AppendsToExistingFile(t *testing.T) {
 	dir := initDataDir(t)
 	for i := range 3 {

@@ -100,7 +100,7 @@ jotter write --project myapp --branch feature/auth --type start --content "Worki
 jotter write --project myapp --branch feature/auth --type finish --content "OAuth complete" --next "Add refresh token support"
 ```
 
-Entry types: `start`, `checkpoint`, `note`, `break`, `finish`.
+Entry types: `start`, `checkpoint`, `note`, `break`, `finish`, `handover`.
 
 The `--next` flag records what to pick up next session. Writes only commit locally — the remote is updated asynchronously by the background timer (see `daemon` below), or on demand with `jotter sync`.
 

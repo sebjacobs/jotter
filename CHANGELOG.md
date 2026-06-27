@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `handover` entry type and bundled `handover` skill — distil a finished feature branch's log into a single entry written onto `main`, so its context survives the branch being deleted. A branch's log is keyed by branch name and becomes undiscoverable once the branch is merged and removed; `handover` captures the branch's arc (what was built, key decisions, surviving follow-ups) with a pointer back to the source branch. Like every entry it commits locally and is pushed asynchronously by the background timer.
+
 ## [v0.14.0] — 2026-06-27
 
 ### Added
