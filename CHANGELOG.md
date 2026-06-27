@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.14.0] — 2026-06-27
+
+### Added
+- `jotter sync --all` — push every registered data repo that has a remote in one go. Each `jotter write` now records its resolved `data_dir` in a small global registry (`~/.jotter.d/registry`, overridable via `$JOTTER_STATE_DIR`), so the background pusher can reach all of a user's session-loggers without being handed the list. Repos without a remote are skipped; one repo's failure doesn't abort the rest, and the command only errors when every repo it attempted failed. Output is sequential, with each repo's result indented under its header and a per-run timestamp so the daemon log stays readable across runs.
+- `jotter daemon install` / `uninstall` / `status` — manage a macOS launchd timer that runs `jotter sync --all` on an interval (default 300s, `--interval` to change), so writes never block on the network. `install` writes a LaunchAgent and reloads it; `status` reports whether it's installed and loaded plus a recent-log tail; `uninstall` removes it. `jotter setup` gains a step that offers to install the timer once a remote is configured. The agent's label honours `$LAUNCHD_PREFIX` (`<prefix>.jotter`, default `com.jotter`), so it slots into an existing launchd naming scheme with no jotter-specific config — purely opt-in. launchd is macOS-only; other platforms get a clear pointer to cron/systemd.
+
+### Changed
+- `finish` entries no longer push synchronously. Every write, finish included, now just commits locally and returns — pushing is asynchronous, carried by the launchd timer (`jotter daemon`) on its interval, or forced immediately with `jotter sync`. This makes writes uniformly fast and never network-bound; the trade-off is a weaker walk-away guarantee (a finish reaches the remote by the next timer tick rather than instantly).
+
+### Fixed
+- `TestGitConfigSet_SurvivesBranchRename` is no longer fragile to the host git's `init.defaultBranch`. The test helper created its repo with a bare `git init` and then renamed `main`, so on a runner defaulting to `master` (the GitHub Actions Linux image) the rename failed before the assertion. The helper now uses `git init -b main` for a deterministic branch name.
+
 ## [v0.13.0] — 2026-06-27
 
 ### Added
@@ -142,7 +154,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.14.0...HEAD
+[v0.14.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.14.0
 [v0.13.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.13.0
 [v0.12.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.12.0
 [v0.11.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.11.0
