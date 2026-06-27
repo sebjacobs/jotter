@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.13.0] — 2026-06-27
+
 ### Added
 - Automatic branch-rename tracking. Logs are stored one file per branch, so `git branch -m` previously orphaned a branch's history under the old name. Jotter now stamps a stable id in the project repo's git config (`branch.<name>.jotter-id`, which survives the rename) plus a `<branch>.jsonl.id` sidecar on first write; the next write after a rename moves the logfile into place so history stays continuous. Best-effort and scoped to on-branch writes — scripted and cross-project writes are unaffected.
 - `jotter branch mv <old> <new>` — the manual counterpart, for renaming a branch's logs when you won't write to it again. Moves `logs/<project>/<old>.jsonl` (and its sidecar) to `<new>` and commits, refusing to overwrite an existing destination.
@@ -140,7 +142,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.13.0...HEAD
+[v0.13.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.13.0
 [v0.12.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.12.0
 [v0.11.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.11.0
 [v0.10.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.10.0
