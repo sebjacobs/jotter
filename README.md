@@ -17,7 +17,7 @@ Jotter gives each session a durable log of its own: structured checkpoints commi
 ## How it works
 
 - **In Claude Code**, you type `/start`, `/save`, `/break`, `/finish`, or `/recover`. The skills (installed by `jotter setup`) handle the rest — they know what to capture and call `jotter write` for you.
-- **Entries land as JSONL** in a separate git repo, one file per project/branch. One commit per entry. A `/finish` also pushes to the remote.
+- **Entries land as JSONL** in a separate git repo, one file per project/branch. One commit per entry. Pushing to the remote happens asynchronously — a background timer (`jotter daemon`) pushes every logged repo on an interval, so writes never block on the network.
 - **To look back**, use `jotter tail` to replay a branch, `jotter ls` to browse what's been logged, or `jotter search` to grep across everything — by project, branch, type, or date.
 
 ## Install
@@ -71,7 +71,7 @@ The primary interface is the five session-management skills — you don't call `
 | `/start`   | Beginning a session. Reads recent logs, proposes a goal, writes a `start` entry. |
 | `/save`    | Mid-session checkpoint. Jot down a decision, a finding, or progress. |
 | `/break`   | Stepping away. Snapshots state so you can pick up cleanly. |
-| `/finish`  | Wrapping up. Writes a summary, records what's next, pushes to the remote. |
+| `/finish`  | Wrapping up. Writes a summary and records what's next (the push happens in the background). |
 | `/recover` | Picking up a crashed or unfinished session. Reconstructs context from the last entries. |
 
 A typical day:
@@ -82,14 +82,14 @@ A typical day:
 /save           # "refresh-token flow implemented, tests passing"
 ...more work, hit a blocker...
 /save           # "blocked on the cookie-vs-header decision — see note"
-/finish         # writes summary, records 'cookie vs header: decide next session', pushes
+/finish         # writes summary, records 'cookie vs header: decide next session'
 ```
 
 Next session, `/start` reads that `finish` entry and reminds you where you were.
 
 ## CLI reference
 
-When you want to query past sessions or write entries outside of a Claude Code session, the CLI has four main subcommands.
+When you want to query past sessions or write entries outside of a Claude Code session, the CLI has these subcommands.
 
 ### write
 
@@ -102,7 +102,7 @@ jotter write --project myapp --branch feature/auth --type finish --content "OAut
 
 Entry types: `start`, `checkpoint`, `note`, `break`, `finish`.
 
-The `--next` flag records what to pick up next session. Finish entries also trigger a git push.
+The `--next` flag records what to pick up next session. Writes only commit locally — the remote is updated asynchronously by the background timer (see `daemon` below), or on demand with `jotter sync`.
 
 ### mv
 
@@ -170,6 +170,32 @@ jotter search "deploy" --project myapp --branch main           # scoped search
 
 Filters (`--project`, `--branch`, `--type`, `--since`) can be combined. All filters are AND'd. Search term is case-insensitive and matches against content and next fields.
 
+### sync
+
+Push pending entries to the remote.
+
+```bash
+jotter sync            # fetch, rebase local entries, push — for the current cwd's data repo
+jotter sync --all      # do the same for every registered data repo that has a remote
+```
+
+Writes only commit locally, so `sync` is how committed entries reach the remote. It fetches, rebases your local entries on top of anything the remote gained, then pushes — also the recovery path when a previous push failed (offline, or the remote moved on). `--all` walks the registry of every data repo you've written to and is what the background timer runs; data repos without a remote are skipped.
+
+### daemon
+
+Manage the background push timer (macOS/launchd).
+
+```bash
+jotter daemon install                  # install the timer (pushes every 5 minutes)
+jotter daemon install --interval 60    # ...or choose the interval, in seconds
+jotter daemon status                   # is it installed and loaded? plus a recent-log tail
+jotter daemon uninstall                # remove it
+```
+
+`install` writes a launchd LaunchAgent that runs `jotter sync --all` on an interval, so every data repo you log to is pushed in the background and writes never block on the network. `jotter setup` offers to install it for you once a remote is configured. On non-macOS platforms, schedule `jotter sync --all` with cron or a systemd timer instead.
+
+The agent's label defaults to `com.jotter`. If you manage your launchd agents under a single reverse-DNS prefix (e.g. a service manager that globs `<prefix>.*`), export `LAUNCHD_PREFIX` and jotter names its agent `<prefix>.jotter` so it joins that set — `LAUNCHD_PREFIX=com.example` yields `com.example.jotter`. `jotter daemon status` prints the resolved label. The variable is purely opt-in; unset, jotter uses `com.jotter` and nothing else is required.
+
 ## Configuration
 
 Jotter is configured via a `.jotter` TOML file. Drop one in your home directory for a global default, and optionally one at the root of any project that should use a different data dir:
@@ -192,7 +218,7 @@ Supported keys:
 
 Run `jotter config` to see which `.jotter` file jotter would use from your current cwd and the resolved `data_dir`. Use this before `jotter write` if you're unsure which store an entry will land in.
 
-The data directory must be a git repository. Jotter auto-commits every entry and pushes on session finish.
+The data directory must be a git repository. Jotter auto-commits every entry locally; pushing to the remote happens asynchronously via the background timer (`jotter daemon`) or on demand with `jotter sync`.
 
 ## Shell completion
 

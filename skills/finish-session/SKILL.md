@@ -55,7 +55,7 @@ jotter write \
   --next "<priorities from preview>"
 ```
 
-`jotter write --type finish` auto-commits and pushes the data repo so the handover is durable.
+`jotter write --type finish` auto-commits the data repo locally. The push happens asynchronously — the background timer (`jotter daemon`) carries the handover to the remote within its interval, so the write never blocks on the network. To push immediately, run `jotter sync`.
 
 ### 5 — Confirm
 
