@@ -3,6 +3,7 @@ package internal
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -73,4 +74,112 @@ func FindLogByID(dataDir, project, id string) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// ReconcileBranch ensures the logfile for (project, branch) is named for the
+// current branch, following a git rename if one happened, and returns the path
+// the caller should append the entry to.
+//
+// It anchors the branch's identity in cwd's repo config on first sight, and on
+// later writes uses that anchor to detect a rename and git-mv the stale logfile
+// (and its sidecar) into place. It is best-effort: a non-nil warn means tracking
+// was skipped this time, and logPath falls back to the current-name file so the
+// write still lands. Only a genuine path-construction error is returned as a
+// hard error (empty logPath).
+func ReconcileBranch(dataDir, cwd, project, branch string) (logPath string, warn error) {
+	fallback, err := JSONLPath(dataDir, project, branch)
+	if err != nil {
+		return "", err
+	}
+	sidecar, err := SidecarPath(dataDir, project, branch)
+	if err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(fallback), 0o755); err != nil {
+		return fallback, err
+	}
+
+	id, err := GitConfigGet(cwd, AnchorConfigKey(branch))
+	if err != nil {
+		return fallback, err
+	}
+
+	if id == "" {
+		// Not yet anchored. Adopt an existing sidecar's id if one is somehow
+		// already present (e.g. branch deleted then recreated under the same
+		// name), otherwise mint a fresh one.
+		existing, _ := ReadSidecar(sidecar)
+		if existing == "" {
+			existing = NewID()
+		}
+		if err := GitConfigSet(cwd, AnchorConfigKey(branch), existing); err != nil {
+			return fallback, err
+		}
+		if err := WriteSidecar(sidecar, existing); err != nil {
+			return fallback, err
+		}
+		return fallback, nil
+	}
+
+	loc, err := FindLogByID(dataDir, project, id)
+	if err != nil {
+		return fallback, err
+	}
+	sanitised := SanitiseBranch(branch)
+	switch loc {
+	case sanitised:
+		return fallback, nil
+	case "":
+		// Anchored, but no logfile carries the id yet (first write, or the file
+		// was removed). Stamp the current-name file.
+		if err := WriteSidecar(sidecar, id); err != nil {
+			return fallback, err
+		}
+		return fallback, nil
+	default:
+		// loc holds the stale (sanitised) name — a rename happened.
+		if err := moveBranchLogs(dataDir, project, UnsanitiseBranch(loc), branch); err != nil {
+			return fallback, err
+		}
+		return fallback, nil
+	}
+}
+
+// moveBranchLogs git-mv's a branch's logfile and its id sidecar from old to new
+// within the data repo and commits the move. Shared by ReconcileBranch and the
+// `jotter branch mv` command. Refuses when the destination logfile already
+// exists, mirroring `jotter mv`'s refuse-to-overwrite guard.
+func moveBranchLogs(dataDir, project, old, new string) error {
+	if old == new {
+		return nil
+	}
+	for _, c := range []struct{ kind, val string }{
+		{"project", project},
+		{"branch", SanitiseBranch(old)},
+		{"branch", SanitiseBranch(new)},
+	} {
+		if err := ValidatePathComponent(c.kind, c.val); err != nil {
+			return err
+		}
+	}
+
+	oldRel := filepath.Join("logs", project, SanitiseBranch(old)+".jsonl")
+	newRel := filepath.Join("logs", project, SanitiseBranch(new)+".jsonl")
+
+	if _, err := os.Stat(filepath.Join(dataDir, oldRel)); err != nil {
+		return fmt.Errorf("no logs for branch %q in project %q", old, project)
+	}
+	if _, err := os.Stat(filepath.Join(dataDir, newRel)); err == nil {
+		return fmt.Errorf("branch %q already has logs — refusing to overwrite", new)
+	}
+
+	if err := GitMove(dataDir, oldRel, newRel); err != nil {
+		return fmt.Errorf("renaming logs: %w", err)
+	}
+	if _, err := os.Stat(filepath.Join(dataDir, oldRel+sidecarSuffix)); err == nil {
+		if err := GitMove(dataDir, oldRel+sidecarSuffix, newRel+sidecarSuffix); err != nil {
+			return fmt.Errorf("renaming sidecar: %w", err)
+		}
+	}
+	return GitCommitStaged(dataDir, fmt.Sprintf("rename: %s -> %s", oldRel, newRel))
 }

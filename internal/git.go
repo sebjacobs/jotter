@@ -75,6 +75,11 @@ func GitCommit(dataDir, filePath, message string) error {
 	return nil
 }
 
+// GitAdd stages a path within the data repo.
+func GitAdd(dataDir, path string) error {
+	return run(dataDir, "git", "add", path)
+}
+
 // GitMove renames a tracked path within the data repo, staging the rename.
 // from and to are relative to dataDir.
 func GitMove(dataDir, from, to string) error {
