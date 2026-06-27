@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.15.0] — 2026-06-27
+
 ### Added
 - `handover` entry type and bundled `handover` skill — distil a finished feature branch's log into a single entry written onto `main`, so its context survives the branch being deleted. A branch's log is keyed by branch name and becomes undiscoverable once the branch is merged and removed; `handover` captures the branch's arc (what was built, key decisions, surviving follow-ups) with a pointer back to the source branch. Like every entry it commits locally and is pushed asynchronously by the background timer.
 
@@ -161,6 +163,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
 [Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.14.0...HEAD
+[v0.14.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.14.0
+[v0.15.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.15.0
 [v0.14.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.14.0
 [v0.13.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.13.0
 [v0.12.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.12.0
