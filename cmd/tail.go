@@ -16,20 +16,25 @@ var tailCmd = &cobra.Command{
 }
 
 func init() {
-	tailCmd.Flags().String("project", "", "Project name (required)")
-	tailCmd.Flags().String("branch", "", "Branch name (required)")
+	tailCmd.Flags().String("project", "", "Project name (default: basename of the git toplevel)")
+	tailCmd.Flags().String("branch", "", "Branch name (default: current git branch)")
 	tailCmd.Flags().IntP("limit", "n", 1, "Number of entries to return")
-	_ = tailCmd.MarkFlagRequired("project")
-	_ = tailCmd.MarkFlagRequired("branch")
 	_ = tailCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = tailCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(tailCmd)
 }
 
 func runTail(cmd *cobra.Command, args []string) error {
-	project, _ := cmd.Flags().GetString("project")
-	branch, _ := cmd.Flags().GetString("branch")
 	limit, _ := cmd.Flags().GetInt("limit")
+
+	project, err := resolveProject(cmd)
+	if err != nil {
+		return err
+	}
+	branch, err := resolveBranch(cmd)
+	if err != nil {
+		return err
+	}
 
 	dataDir, err := internal.GetDataDir()
 	if err != nil {

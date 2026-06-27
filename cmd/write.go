@@ -17,13 +17,11 @@ var writeCmd = &cobra.Command{
 }
 
 func init() {
-	writeCmd.Flags().String("project", "", "Project name (required)")
-	writeCmd.Flags().String("branch", "", "Branch name (required)")
+	writeCmd.Flags().String("project", "", "Project name (default: basename of the git toplevel)")
+	writeCmd.Flags().String("branch", "", "Branch name (default: current git branch)")
 	writeCmd.Flags().String("type", "", "Entry type: start, checkpoint, note, break, finish (required)")
 	writeCmd.Flags().String("content", "", "Entry content (required)")
 	writeCmd.Flags().String("next", "", "Next task description")
-	_ = writeCmd.MarkFlagRequired("project")
-	_ = writeCmd.MarkFlagRequired("branch")
 	_ = writeCmd.MarkFlagRequired("type")
 	_ = writeCmd.MarkFlagRequired("content")
 	_ = writeCmd.RegisterFlagCompletionFunc("project", completeProjects)
@@ -33,14 +31,21 @@ func init() {
 }
 
 func runWrite(cmd *cobra.Command, args []string) error {
-	project, _ := cmd.Flags().GetString("project")
-	branch, _ := cmd.Flags().GetString("branch")
 	entryType, _ := cmd.Flags().GetString("type")
 	content, _ := cmd.Flags().GetString("content")
 	next, _ := cmd.Flags().GetString("next")
 
 	if !internal.IsValidEntryType(entryType) {
 		return fmt.Errorf("invalid entry type %q: must be one of start, checkpoint, note, break, finish", entryType)
+	}
+
+	project, err := resolveProject(cmd)
+	if err != nil {
+		return err
+	}
+	branch, err := resolveBranch(cmd)
+	if err != nil {
+		return err
 	}
 
 	dataDir, err := internal.GetDataDir()

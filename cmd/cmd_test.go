@@ -1070,6 +1070,111 @@ func runJotterFromGitRepo(t *testing.T, branch string, args ...string) (string, 
 	return stdout.String(), stderr.String(), exitCode, workdir
 }
 
+// runJotterFromGitRepoWithData runs jotter from a fresh git repo on the given
+// branch, with a .jotter file in that repo pointing at dataDir. It returns the
+// repo's path so callers can derive the inferred project name (its basename).
+func runJotterFromGitRepoWithData(t *testing.T, dataDir, branch string, args ...string) (string, string, int, string) {
+	t.Helper()
+	workdir := t.TempDir()
+	for _, cmdArgs := range [][]string{
+		{"git", "init", "-b", branch},
+		{"git", "config", "user.email", "test@test.com"},
+		{"git", "config", "user.name", "Test"},
+		{"git", "commit", "--allow-empty", "-m", "init"},
+	} {
+		c := exec.Command(cmdArgs[0], cmdArgs[1:]...)
+		c.Dir = workdir
+		if out, err := c.CombinedOutput(); err != nil {
+			t.Fatalf("%v failed: %s", cmdArgs, out)
+		}
+	}
+	configPath := filepath.Join(workdir, ".jotter")
+	if err := os.WriteFile(configPath, fmt.Appendf(nil, "data_dir = %q\n", dataDir), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	stdout, stderr, exitCode := runJotterIn(t, workdir, args...)
+	return stdout, stderr, exitCode, workdir
+}
+
+// runJotterIn runs the jotter binary in an existing working directory with a
+// clean HOME, leaving any .jotter / git setup already there in place.
+func runJotterIn(t *testing.T, workdir string, args ...string) (string, string, int) {
+	t.Helper()
+	cleanHome := t.TempDir()
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = workdir
+	cmd.Env = append(os.Environ(), "HOME="+cleanHome)
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			t.Fatalf("failed to run jotter: %v", err)
+		}
+	}
+	return stdout.String(), stderr.String(), exitCode
+}
+
+func TestWrite_InfersProjectAndBranchFromGit(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/infer",
+		"write", "--type", "note", "--content", "inferred entry")
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr: %s", code, stderr)
+	}
+	project := filepath.Base(workdir)
+	path := filepath.Join(dir, "logs", project, "feature+infer.jsonl")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("expected log file at %s: %v", path, err)
+	}
+}
+
+func TestTail_InfersProjectAndBranchFromGit(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/infer",
+		"write", "--type", "note", "--content", "inferred entry")
+	if code != 0 {
+		t.Fatalf("write exit code %d, stderr: %s", code, stderr)
+	}
+	// Tail from the same repo with no --project/--branch should find that entry.
+	stdout, stderr, code := runJotterIn(t, workdir, "tail")
+	if code != 0 {
+		t.Fatalf("tail exit code %d, stderr: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "inferred entry") {
+		t.Errorf("tail output missing inferred entry: %s", stdout)
+	}
+}
+
+func TestWrite_ExplicitFlagsOverrideInference(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code, _ := runJotterFromGitRepoWithData(t, dir, "feature/infer",
+		"write", "--project", "explicit-proj", "--branch", "explicit-branch",
+		"--type", "note", "--content", "x")
+	if code != 0 {
+		t.Fatalf("exit code %d, stderr: %s", code, stderr)
+	}
+	path := filepath.Join(dir, "logs", "explicit-proj", "explicit-branch.jsonl")
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("explicit flags should win, expected file at %s: %v", path, err)
+	}
+}
+
+func TestWrite_ErrorsOutsideGitRepoWithoutFlags(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code := runJotter(t, dir, "write", "--type", "note", "--content", "x")
+	if code == 0 {
+		t.Error("expected non-zero exit outside a git repo without --project/--branch")
+	}
+	if !strings.Contains(stderr, "not inside a git repo") {
+		t.Errorf("stderr missing expected message: %s", stderr)
+	}
+}
+
 func TestProject_PrintsBasenameOfGitToplevel(t *testing.T) {
 	stdout, _, code, workdir := runJotterFromGitRepo(t, "main", "project")
 	if code != 0 {
