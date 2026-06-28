@@ -8,22 +8,52 @@ before:
     - go mod tidy
 
 builds:
-  - id: jotter
+  # Split darwin/linux into separate ids so binary_signs can scope quill to
+  # darwin only — quill errors on non-Mach-O input, and the OSS edition's
+  # binary_signs has no goos filter, only `ids`.
+  - id: jotter-darwin
     main: ./
     binary: jotter
     env:
       - CGO_ENABLED=0
     goos:
       - darwin
-      - linux
     goarch:
       - amd64
       - arm64
-    ldflags:
+    ldflags: &ldflags
       - -s -w
       - -X github.com/sebjacobs/jotter/cmd.version={{.Version}}
       - -X github.com/sebjacobs/jotter/cmd.commit={{.FullCommit}}
       - -X github.com/sebjacobs/jotter/cmd.date={{.Date}}
+  - id: jotter-linux
+    main: ./
+    binary: jotter
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    ldflags: *ldflags
+
+binary_signs:
+  - id: quill
+    cmd: quill
+    args:
+      - sign-and-notarize
+      # Snapshots have no credentials: ad-hoc sign and skip the notary.
+      - "--dry-run={{ .IsSnapshot }}"
+      - "--ad-hoc={{ .IsSnapshot }}"
+      - "-vv"
+      - "${artifact}"
+    ids:
+      - jotter-darwin
+    # quill reads QUILL_SIGN_* / QUILL_NOTARY_* from the inherited process
+    # environment, exported by the release workflow's job-level env from repo
+    # secrets. Snapshots run --ad-hoc and need none of them.
+    output: true
 
 archives:
   - formats: [tar.gz]
