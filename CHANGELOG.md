@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.16.1] — 2026-06-28
+
 ### Removed
 - The Gatekeeper quarantine-strip cask hook is gone. It was a stopgap that ran `xattr -dr com.apple.quarantine` post-install to keep an unsigned binary from tripping Gatekeeper on first run. Now that release binaries are signed with a Developer ID Application certificate and notarized (v0.16.0), Gatekeeper accepts them on their own — `spctl -a` reports `source=Notarized Developer ID`, accepted — so the strip is redundant and the cask no longer fights Homebrew's quarantine behaviour.
 
@@ -170,7 +172,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.16.0...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.16.1...HEAD
+[v0.16.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.16.1
 [v0.16.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.16.0
 [v0.15.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.15.0
 [v0.14.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.14.0
