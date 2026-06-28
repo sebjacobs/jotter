@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- The Gatekeeper quarantine-strip cask hook is gone. It was a stopgap that ran `xattr -dr com.apple.quarantine` post-install to keep an unsigned binary from tripping Gatekeeper on first run. Now that release binaries are signed with a Developer ID Application certificate and notarized (v0.16.0), Gatekeeper accepts them on their own — `spctl -a` reports `source=Notarized Developer ID`, accepted — so the strip is redundant and the cask no longer fights Homebrew's quarantine behaviour.
+
 ## [v0.16.0] — 2026-06-28
 
 ### Changed
