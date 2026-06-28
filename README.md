@@ -197,6 +197,16 @@ jotter daemon uninstall                # remove it
 
 The agent's label defaults to `com.jotter`. If you manage your launchd agents under a single reverse-DNS prefix (e.g. a service manager that globs `<prefix>.*`), export `LAUNCHD_PREFIX` and jotter names its agent `<prefix>.jotter` so it joins that set — `LAUNCHD_PREFIX=com.example` yields `com.example.jotter`. `jotter daemon status` prints the resolved label. The variable is purely opt-in; unset, jotter uses `com.jotter` and nothing else is required.
 
+### project
+
+Print the current project name.
+
+```bash
+jotter project        # basename of the git toplevel for the current directory
+```
+
+A project's jotter name is the basename of its git toplevel — the same value the other commands default `--project` to. `project` exposes it directly so skill templates and scripts can pass `--project "$(jotter project)"` without reimplementing the git plumbing. It errors if the current directory isn't inside a git repo.
+
 ## Configuration
 
 Jotter is configured via a `.jotter` TOML file. Drop one in your home directory for a global default, and optionally one at the root of any project that should use a different data dir:
