@@ -76,15 +76,6 @@ snapshot:
 homebrew_casks:
   - name: jotter
     binaries: [jotter]
-    # Stopgap until the binary is signed + notarized: Homebrew casks quarantine
-    # downloaded binaries by default, so jotter gets a com.apple.quarantine attr
-    # on install/upgrade and Gatekeeper blocks first run. Strip it post-install.
-    hooks:
-      post:
-        install: |
-          if OS.mac? && File.exist?("#{staged_path}/jotter")
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/jotter"]
-          end
     repository:
       owner: sebjacobs
       name: homebrew-tap
