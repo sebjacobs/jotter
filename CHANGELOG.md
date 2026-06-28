@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.16.0] — 2026-06-28
+
 ### Changed
 - macOS release binaries are now signed with a Developer ID Application certificate and notarized by Apple, via [quill](https://github.com/anchore/quill) wired into GoReleaser's `binary_signs`. The release runs on a Linux runner, so native `codesign`/`notarytool` aren't available; quill signs and notarizes Mach-O binaries from Linux without Xcode. quill errors on non-Mach-O input and the OSS `binary_signs` has no `goos` filter, so the build is split into separate darwin/linux ids and signing is scoped to the darwin id. Credentials come from five repo secrets (the Developer ID `.p12` plus its password, and an App Store Connect API key for the notary service). Snapshots sign ad-hoc and skip the notary, so `goreleaser release --snapshot` still runs credential-free. The Gatekeeper quarantine-strip cask hook stays in place for now and will be removed in a follow-up once a notarized release is confirmed passing Gatekeeper.
 
@@ -165,8 +167,8 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.14.0...HEAD
-[v0.14.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.14.0
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.16.0...HEAD
+[v0.16.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.16.0
 [v0.15.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.15.0
 [v0.14.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.14.0
 [v0.13.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.13.0
