@@ -8,9 +8,9 @@ before:
     - go mod tidy
 
 builds:
-  # Split darwin/linux into separate ids so binary_signs can scope quill to
-  # darwin only — quill errors on non-Mach-O input, and the OSS edition's
-  # binary_signs has no goos filter, only `ids`.
+  # Split darwin/linux into separate ids so the quill post-hook only runs on
+  # the darwin build — quill errors on non-Mach-O input, and a single combined
+  # build would run the hook against the linux ELF too.
   - id: jotter-darwin
     main: ./
     binary: jotter
@@ -26,6 +26,19 @@ builds:
       - -X github.com/sebjacobs/jotter/cmd.version={{.Version}}
       - -X github.com/sebjacobs/jotter/cmd.commit={{.FullCommit}}
       - -X github.com/sebjacobs/jotter/cmd.date={{.Date}}
+    # Sign + notarize each darwin binary in place, right after it's built and
+    # before archiving, so the signed binary is what ends up in the tarball.
+    # quill (anchore/quill) signs and notarizes Mach-O binaries from the Linux
+    # release runner — no macOS/codesign needed. This is the post-hook form
+    # rather than a binary_signs block on purpose: signs/binary_signs register
+    # a separate signature artifact that GoReleaser then tries to upload, but
+    # quill signs in place and writes no such file, so the publish step fails.
+    # quill reads QUILL_SIGN_* / QUILL_NOTARY_* from the inherited process
+    # environment (the release workflow's job env, from repo secrets); snapshots
+    # run --ad-hoc + --dry-run and need none of them.
+    hooks:
+      post:
+        - cmd: quill sign-and-notarize "{{ .Path }}" --dry-run={{ .IsSnapshot }} --ad-hoc={{ .IsSnapshot }} -vv
   - id: jotter-linux
     main: ./
     binary: jotter
@@ -37,26 +50,6 @@ builds:
       - amd64
       - arm64
     ldflags: *ldflags
-
-binary_signs:
-  - id: quill
-    cmd: quill
-    args:
-      - sign-and-notarize
-      # Snapshots have no credentials: ad-hoc sign and skip the notary.
-      - "--dry-run={{ .IsSnapshot }}"
-      - "--ad-hoc={{ .IsSnapshot }}"
-      - "-vv"
-      - "${artifact}"
-    ids:
-      - jotter-darwin
-    # quill signs the binary in place (no detached signature file), so don't
-    # register an output artifact — doing so makes GoReleaser try to upload a
-    # signature file that doesn't exist and the publish step fails.
-    #
-    # quill reads QUILL_SIGN_* / QUILL_NOTARY_* from the inherited process
-    # environment, exported by the release workflow's job-level env from repo
-    # secrets. Snapshots run --ad-hoc and need none of them.
 
 archives:
   - formats: [tar.gz]
