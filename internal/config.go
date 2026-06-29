@@ -82,6 +82,14 @@ func GetDataDir() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return GetDataDirFrom(startDir)
+}
+
+// GetDataDirFrom resolves the session logs data directory for an explicit start
+// directory rather than the process cwd. Cross-store `mv --from` uses it to
+// resolve the source store from a project's old on-disk location while the
+// destination store still resolves from cwd.
+func GetDataDirFrom(startDir string) (string, error) {
 	path, err := ResolveConfigFile(startDir)
 	if err != nil {
 		return "", err

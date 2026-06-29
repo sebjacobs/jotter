@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `jotter mv --from <dir>` — relocate a project's logs across stores, not just rename within one. A project's logs live in whichever `.jotter` store serves its directory, so moving the project between trees that resolve to different stores (e.g. a client tree with its own data repo and a personal tree) orphans its logs in the old store. `--from <old-dir>` resolves the source store from where the project used to live while the destination store resolves from the current directory; the logs are moved across, the removal committed in the source store and the addition in the destination. A cross-store move may keep the same name (the usual case — only the directory's category changed), which a plain same-store rename rejects as a no-op. Without `--from`, `mv` is unchanged.
+
 ## [v0.16.1] — 2026-06-28
 
 ### Removed
