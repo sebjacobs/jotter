@@ -118,3 +118,117 @@ func TestMv_RejectsSameName(t *testing.T) {
 		t.Errorf("stderr: %s", stderr)
 	}
 }
+
+// configWorkdir returns a fresh directory holding a .jotter pointing at store,
+// suitable for passing as `mv --from` so jotter resolves that store from it.
+func configWorkdir(t *testing.T, store string) string {
+	t.Helper()
+	dir := t.TempDir()
+	body := []byte("data_dir = \"" + store + "\"\n")
+	if err := os.WriteFile(filepath.Join(dir, ".jotter"), body, 0o644); err != nil {
+		t.Fatalf("writing .jotter: %v", err)
+	}
+	return dir
+}
+
+func TestMv_CrossStore_RelocatesKeepingName(t *testing.T) {
+	src := initDataDir(t)
+	dest := initDataDir(t)
+	seedEntry(t, src, "proj", "main")
+
+	stdout, stderr, code := runJotter(t, dest, "mv", "proj", "proj", "--from", configWorkdir(t, src))
+	if code != 0 {
+		t.Fatalf("exit %d: %s %s", code, stdout, stderr)
+	}
+	if _, err := os.Stat(filepath.Join(src, "logs", "proj")); !os.IsNotExist(err) {
+		t.Errorf("source logs dir still present")
+	}
+	if _, err := os.Stat(filepath.Join(dest, "logs", "proj", "main.jsonl")); err != nil {
+		t.Errorf("destination logs file missing: %v", err)
+	}
+	if !strings.Contains(stdout, "Relocated project") {
+		t.Errorf("unexpected stdout: %s", stdout)
+	}
+}
+
+func TestMv_CrossStore_CommitsBothStoresLeavingThemClean(t *testing.T) {
+	src := initDataDir(t)
+	dest := initDataDir(t)
+	seedEntry(t, src, "proj", "main")
+
+	if _, _, code := runJotter(t, dest, "mv", "proj", "proj", "--from", configWorkdir(t, src)); code != 0 {
+		t.Fatalf("mv exit %d", code)
+	}
+
+	if status := git(t, src, "status", "--porcelain"); strings.TrimSpace(status) != "" {
+		t.Errorf("source repo dirty after relocate: %q", status)
+	}
+	if status := git(t, dest, "status", "--porcelain"); strings.TrimSpace(status) != "" {
+		t.Errorf("destination repo dirty after relocate: %q", status)
+	}
+	if subject := git(t, src, "log", "-1", "--format=%s"); !strings.Contains(subject, "relocate: move logs/proj") {
+		t.Errorf("unexpected source commit subject: %q", subject)
+	}
+	if subject := git(t, dest, "log", "-1", "--format=%s"); !strings.Contains(subject, "relocate: bring in logs/proj") {
+		t.Errorf("unexpected destination commit subject: %q", subject)
+	}
+}
+
+func TestMv_CrossStore_CanRenameWhileRelocating(t *testing.T) {
+	src := initDataDir(t)
+	dest := initDataDir(t)
+	seedEntry(t, src, "old-proj", "feature/x")
+
+	if _, stderr, code := runJotter(t, dest, "mv", "old-proj", "new-proj", "--from", configWorkdir(t, src)); code != 0 {
+		t.Fatalf("exit %d: %s", code, stderr)
+	}
+
+	data, err := os.ReadFile(filepath.Join(dest, "logs", "new-proj", "feature+x.jsonl"))
+	if err != nil {
+		t.Fatalf("relocated branch file missing: %v", err)
+	}
+	if !strings.Contains(string(data), "seed") {
+		t.Errorf("entry content lost: %s", data)
+	}
+}
+
+func TestMv_CrossStore_ErrorsWhenSourceMissing(t *testing.T) {
+	src := initDataDir(t)
+	dest := initDataDir(t)
+
+	_, stderr, code := runJotter(t, dest, "mv", "nope", "nope", "--from", configWorkdir(t, src))
+	if code != 1 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(stderr, "no logs for project") {
+		t.Errorf("stderr: %s", stderr)
+	}
+}
+
+func TestMv_CrossStore_ErrorsWhenDestinationExists(t *testing.T) {
+	src := initDataDir(t)
+	dest := initDataDir(t)
+	seedEntry(t, src, "proj", "main")
+	seedEntry(t, dest, "proj", "main")
+
+	_, stderr, code := runJotter(t, dest, "mv", "proj", "proj", "--from", configWorkdir(t, src))
+	if code != 1 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(stderr, "already has logs") {
+		t.Errorf("stderr: %s", stderr)
+	}
+}
+
+func TestMv_FromResolvingToSameStoreStillRejectsSameName(t *testing.T) {
+	dir := initDataDir(t)
+	seedEntry(t, dir, "same", "main")
+
+	_, stderr, code := runJotter(t, dir, "mv", "same", "same", "--from", configWorkdir(t, dir))
+	if code != 1 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(stderr, "same") {
+		t.Errorf("stderr: %s", stderr)
+	}
+}

@@ -107,13 +107,17 @@ The `--next` flag records what to pick up next session. Writes only commit local
 
 ### mv
 
-Rename a project's logs.
+Rename a project's logs, or move them to another store.
 
 ```bash
-jotter mv old-name new-name
+jotter mv old-name new-name              # rename within the current store
+jotter mv name name --from /old/dir      # relocate to another store, same name
+jotter mv old new --from /old/dir        # relocate and rename
 ```
 
 A project's jotter name is the basename of its git toplevel, so renaming the project directory orphans its logs under the old name. `mv` renames `logs/<old-name>` to `logs/<new-name>` and commits the move locally (it refuses to overwrite an existing destination).
+
+When a project moves to a directory served by a different `.jotter` store — say from a client tree to a personal tree — its logs need to cross stores, not just change name. Pass `--from <old-dir>` so the source store resolves from where the project used to live while the destination store resolves from the current directory. A cross-store move may keep the same name; the removal is committed in the source store and the addition in the destination.
 
 ### branch
 
