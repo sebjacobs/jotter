@@ -30,8 +30,10 @@ func init() {
 }
 
 func runSearch(cmd *cobra.Command, args []string) error {
-	project, _ := cmd.Flags().GetString("project")
-	branch, _ := cmd.Flags().GetString("branch")
+	scope, err := resolveScope(cmd)
+	if err != nil {
+		return err
+	}
 	since, _ := cmd.Flags().GetString("since")
 	until, _ := cmd.Flags().GetString("until")
 	entryType, _ := cmd.Flags().GetString("type")
@@ -52,7 +54,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	logsDir := filepath.Join(dataDir, "logs")
-	paths, err := internal.CollectPaths(dataDir, project, branch)
+	paths, err := scope.Paths(dataDir)
 	if err != nil {
 		return err
 	}

@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 )
 
@@ -55,41 +54,4 @@ func JSONLPath(dataDir, project, branch string) (string, error) {
 		return "", err
 	}
 	return filepath.Join(dataDir, "logs", project, SanitiseBranch(branch)+".jsonl"), nil
-}
-
-// CollectPaths returns JSONL file paths scoped by project and/or branch.
-// Empty project or branch means "all". Non-empty values are validated.
-func CollectPaths(dataDir, project, branch string) ([]string, error) {
-	if project != "" {
-		if err := ValidatePathComponent("project", project); err != nil {
-			return nil, err
-		}
-	}
-	if branch != "" {
-		if err := ValidatePathComponent("branch", SanitiseBranch(branch)); err != nil {
-			return nil, err
-		}
-	}
-
-	logsDir := filepath.Join(dataDir, "logs")
-
-	if project != "" && branch != "" {
-		path, err := JSONLPath(dataDir, project, branch)
-		if err != nil {
-			return nil, err
-		}
-		return []string{path}, nil
-	}
-
-	if project != "" {
-		pattern := filepath.Join(logsDir, project, "*.jsonl")
-		matches, _ := filepath.Glob(pattern)
-		sort.Strings(matches)
-		return matches, nil
-	}
-
-	pattern := filepath.Join(logsDir, "*", "*.jsonl")
-	matches, _ := filepath.Glob(pattern)
-	sort.Strings(matches)
-	return matches, nil
 }

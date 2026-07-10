@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/sebjacobs/jotter/internal"
@@ -31,6 +32,27 @@ func resolveBranch(cmd *cobra.Command) (string, error) {
 		return "", err
 	}
 	return internal.GitCurrentBranch(cwd)
+}
+
+// resolveScope builds the query Scope for ls and search from the --project and
+// --branch flags. An empty --project means all projects; an empty --branch
+// within a project means all of its branches; --branch without --project is
+// ambiguous and errors.
+func resolveScope(cmd *cobra.Command) (internal.Scope, error) {
+	project, _ := cmd.Flags().GetString("project")
+	branch, _ := cmd.Flags().GetString("branch")
+
+	switch {
+	case project == "":
+		if branch != "" {
+			return nil, fmt.Errorf("--branch requires --project")
+		}
+		return internal.AllScope{}, nil
+	case branch == "":
+		return internal.ProjectScope{Project: project}, nil
+	default:
+		return internal.BranchScope{Project: project, Branch: branch}, nil
+	}
 }
 
 // onBranch reports whether cwd's repo is exactly the project and branch being

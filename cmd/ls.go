@@ -42,15 +42,12 @@ type projectInfo struct {
 }
 
 func runLs(cmd *cobra.Command, args []string) error {
-	project, _ := cmd.Flags().GetString("project")
-	branch, _ := cmd.Flags().GetString("branch")
+	scope, err := resolveScope(cmd)
+	if err != nil {
+		return err
+	}
 	since, _ := cmd.Flags().GetString("since")
 	until, _ := cmd.Flags().GetString("until")
-
-	if branch != "" && project == "" {
-		fmt.Fprintln(os.Stderr, "--branch requires --project")
-		os.Exit(1)
-	}
 
 	sinceTime, untilTime, err := parseWindow(since, until)
 	if err != nil {
@@ -69,13 +66,14 @@ func runLs(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	if branch != "" {
-		return lsEntries(dataDir, project, branch, sinceTime, untilTime, windowActive)
+	switch s := scope.(type) {
+	case internal.BranchScope:
+		return lsEntries(dataDir, s.Project, s.Branch, sinceTime, untilTime, windowActive)
+	case internal.ProjectScope:
+		return lsBranches(logsDir, s.Project, sinceTime, untilTime, windowActive)
+	default:
+		return lsProjects(logsDir, sinceTime, untilTime, windowActive)
 	}
-	if project != "" {
-		return lsBranches(logsDir, project, sinceTime, untilTime, windowActive)
-	}
-	return lsProjects(logsDir, sinceTime, untilTime, windowActive)
 }
 
 func lsEntries(dataDir, project, branch string, since, until time.Time, windowActive bool) error {
