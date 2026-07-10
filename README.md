@@ -18,7 +18,7 @@ Jotter gives each session a durable log of its own: structured checkpoints commi
 
 - **In Claude Code**, you type `/start`, `/save`, `/break`, `/stop`, or `/recover`. The skills (installed by `jotter setup`) handle the rest — they know what to capture and call `jotter write` for you.
 - **Entries land as JSONL** in a separate git repo, one file per project/branch. One commit per entry. Pushing to the remote happens asynchronously — a background timer (`jotter daemon`) pushes every logged repo on an interval, so writes never block on the network.
-- **To look back**, use `jotter tail` to replay a branch, `jotter ls` to browse what's been logged, or `jotter search` to grep across everything — by project, branch, type, or date.
+- **To look back**, use `jotter tail` to replay a branch, `jotter ls` to browse what's been logged, or `jotter search` to grep your logs. `ls` and `search` default to the project (and, for search, the branch) you're standing in; add `--all` to reach across everything, or `--project`/`--branch` to scope elsewhere.
 
 ## Install
 
@@ -144,11 +144,13 @@ jotter tail --project myapp --branch feature/auth --limit 5    # last 5 entries
 
 ### ls
 
-List projects or branches.
+List projects or branches. Inside a git repo, `ls` defaults to the current project's branches; outside one it lists every project.
 
 ```bash
-jotter ls                                              # all projects with last activity date
+jotter ls                                              # current project's branches (in a repo); all projects otherwise
+jotter ls --all                                        # all projects with last activity date
 jotter ls --project myapp                              # branches in myapp with entry counts
+jotter ls --branch feature/auth                        # entries on that branch of the current project
 jotter ls --project myapp --branch feature/auth        # entries on that branch, one per line (timestamp, type, title)
 ```
 
@@ -164,16 +166,17 @@ Titles are extracted from the first non-empty line of each entry's content, with
 
 ### search
 
-Search entries across all logs.
+Search entries. Inside a git repo, `search` defaults to the current project and branch; outside one it searches every log.
 
 ```bash
-jotter search "OAuth"                                          # search all logs
+jotter search "OAuth"                                          # current project + branch (in a repo); all logs otherwise
+jotter search "OAuth" --all                                    # search every project and branch
 jotter search --project myapp --type stop                      # all stop entries in myapp
-jotter search --since 2026-04-01                               # entries from April onwards
+jotter search --since 2026-04-01                               # current project + branch, from April onwards
 jotter search "deploy" --project myapp --branch main           # scoped search
 ```
 
-Filters (`--project`, `--branch`, `--type`, `--since`) can be combined. All filters are AND'd. Search term is case-insensitive and matches against content and next fields.
+Filters (`--project`, `--branch`, `--type`, `--since`) can be combined. All filters are AND'd; `--all` widens the default project/branch scope back to everything. Search term is case-insensitive and matches against content and next fields.
 
 ### sync
 

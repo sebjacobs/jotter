@@ -18,8 +18,9 @@ var searchCmd = &cobra.Command{
 }
 
 func init() {
-	searchCmd.Flags().String("project", "", "Scope to this project")
-	searchCmd.Flags().String("branch", "", "Scope to this branch")
+	searchCmd.Flags().String("project", "", "Scope to this project (default: current git project)")
+	searchCmd.Flags().String("branch", "", "Scope to this branch (default: current git branch)")
+	searchCmd.Flags().BoolP("all", "a", false, "Search every project and branch, ignoring the current repo")
 	searchCmd.Flags().String("since", "", "Filter entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("until", "", "Filter entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("type", "", "Filter by entry type")
@@ -30,7 +31,7 @@ func init() {
 }
 
 func runSearch(cmd *cobra.Command, args []string) error {
-	scope, err := resolveScope(cmd)
+	scope, err := resolveScope(cmd, true)
 	if err != nil {
 		return err
 	}
