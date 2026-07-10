@@ -1341,3 +1341,98 @@ func TestBranch_ErrorsOnDetachedHEAD(t *testing.T) {
 		t.Errorf("stderr missing expected message: %s", stderr.String())
 	}
 }
+
+func TestSearch_DefaultsToCurrentProjectAndBranch(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/current",
+		"write", "--type", "note", "--content", "current branch secret")
+	if code != 0 {
+		t.Fatalf("write exit code %d, stderr: %s", code, stderr)
+	}
+	project := filepath.Base(workdir)
+	runJotterIn(t, workdir, "write", "--project", project, "--branch", "other-branch",
+		"--type", "note", "--content", "other branch secret")
+	runJotter(t, dir, "write", "--project", "other-proj", "--branch", "main",
+		"--type", "note", "--content", "other project secret")
+
+	stdout, stderr, code := runJotterIn(t, workdir, "search", "secret")
+	if code != 0 {
+		t.Fatalf("search exit code %d, stderr: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "current branch secret") {
+		t.Errorf("missing current branch entry: %s", stdout)
+	}
+	if strings.Contains(stdout, "other branch secret") {
+		t.Errorf("should be scoped to current branch: %s", stdout)
+	}
+	if strings.Contains(stdout, "other project secret") {
+		t.Errorf("should be scoped to current project: %s", stdout)
+	}
+}
+
+func TestSearch_AllFlagSearchesEveryProject(t *testing.T) {
+	dir := initDataDir(t)
+	_, _, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/current",
+		"write", "--type", "note", "--content", "current branch secret")
+	if code != 0 {
+		t.Fatalf("write exit code %d", code)
+	}
+	runJotter(t, dir, "write", "--project", "other-proj", "--branch", "main",
+		"--type", "note", "--content", "other project secret")
+
+	stdout, stderr, code := runJotterIn(t, workdir, "search", "secret", "--all")
+	if code != 0 {
+		t.Fatalf("search exit code %d, stderr: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "current branch secret") {
+		t.Errorf("missing current project entry: %s", stdout)
+	}
+	if !strings.Contains(stdout, "other project secret") {
+		t.Errorf("--all should include other project: %s", stdout)
+	}
+}
+
+func TestLs_DefaultsToCurrentProjectBranches(t *testing.T) {
+	dir := initDataDir(t)
+	_, _, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/current",
+		"write", "--type", "note", "--content", "hi")
+	if code != 0 {
+		t.Fatalf("write exit code %d", code)
+	}
+	runJotter(t, dir, "write", "--project", "other-proj", "--branch", "unrelated",
+		"--type", "note", "--content", "hi")
+
+	stdout, stderr, code := runJotterIn(t, workdir, "ls")
+	if code != 0 {
+		t.Fatalf("ls exit code %d, stderr: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "feature/current") {
+		t.Errorf("bare ls should list current project's branches: %s", stdout)
+	}
+	if strings.Contains(stdout, "unrelated") {
+		t.Errorf("bare ls should not reach into another project: %s", stdout)
+	}
+}
+
+func TestLs_AllFlagListsEveryProject(t *testing.T) {
+	dir := initDataDir(t)
+	_, _, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/current",
+		"write", "--type", "note", "--content", "hi")
+	if code != 0 {
+		t.Fatalf("write exit code %d", code)
+	}
+	project := filepath.Base(workdir)
+	runJotter(t, dir, "write", "--project", "other-proj", "--branch", "main",
+		"--type", "note", "--content", "hi")
+
+	stdout, stderr, code := runJotterIn(t, workdir, "ls", "--all")
+	if code != 0 {
+		t.Fatalf("ls exit code %d, stderr: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, project) {
+		t.Errorf("--all should list current project: %s", stdout)
+	}
+	if !strings.Contains(stdout, "other-proj") {
+		t.Errorf("--all should list other project: %s", stdout)
+	}
+}

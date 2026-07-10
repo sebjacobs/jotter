@@ -34,25 +34,50 @@ func resolveBranch(cmd *cobra.Command) (string, error) {
 	return internal.GitCurrentBranch(cwd)
 }
 
-// resolveScope builds the query Scope for ls and search from the --project and
-// --branch flags. An empty --project means all projects; an empty --branch
-// within a project means all of its branches; --branch without --project is
-// ambiguous and errors.
-func resolveScope(cmd *cobra.Command) (internal.Scope, error) {
+// resolveScope builds the query Scope for ls and search, defaulting to the repo
+// you're standing in the way gwt/proj do:
+//
+//   - --all forces AllScope, ignoring the current repo.
+//   - An explicit --project is honoured; --branch (if any) narrows within it,
+//     otherwise all of that project's branches are in scope.
+//   - With neither flag, project defaults to the cwd git project. Branch is then
+//     defaulted to the cwd git branch only when defaultBranch is true (search
+//     narrows to the current branch; ls widens to the project's branch list).
+//   - Outside a git repo there is nothing to default to, so scope falls back to
+//     AllScope — unless --branch was given without a resolvable project, which is
+//     ambiguous and errors.
+func resolveScope(cmd *cobra.Command, defaultBranch bool) (internal.Scope, error) {
+	if all, _ := cmd.Flags().GetBool("all"); all {
+		return internal.AllScope{}, nil
+	}
+
 	project, _ := cmd.Flags().GetString("project")
 	branch, _ := cmd.Flags().GetString("branch")
 
-	switch {
-	case project == "":
-		if branch != "" {
-			return nil, fmt.Errorf("--branch requires --project")
+	if project == "" {
+		cwd, err := os.Getwd()
+		if err != nil {
+			return nil, err
 		}
-		return internal.AllScope{}, nil
-	case branch == "":
-		return internal.ProjectScope{Project: project}, nil
-	default:
-		return internal.BranchScope{Project: project, Branch: branch}, nil
+		p, perr := internal.GitProjectName(cwd)
+		if perr != nil {
+			if branch != "" {
+				return nil, fmt.Errorf("--branch requires --project when not inside a git repository")
+			}
+			return internal.AllScope{}, nil
+		}
+		project = p
+		if branch == "" && defaultBranch {
+			if b, berr := internal.GitCurrentBranch(cwd); berr == nil {
+				branch = b
+			}
+		}
 	}
+
+	if branch == "" {
+		return internal.ProjectScope{Project: project}, nil
+	}
+	return internal.BranchScope{Project: project, Branch: branch}, nil
 }
 
 // onBranch reports whether cwd's repo is exactly the project and branch being

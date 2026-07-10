@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- `jotter ls` and `jotter search` now default their scope to the git project (and, for `search`, the branch) you're standing in — matching how `jotter tail` already infers `--project`/`--branch`, and mirroring `gwt`/`proj`. Bare `jotter ls` lists the current project's branches instead of every project; bare `jotter search <term>` searches the current project and branch instead of all logs. Add `-a`/`--all` to restore the old global behaviour, or pass `--project`/`--branch` to scope elsewhere. Outside a git repo there's nothing to infer, so both commands fall back to global scope exactly as before — no change for CI, cron, or ad-hoc use. Explicit `--project`/`--branch` callers (including the skills and the catch-up guidance) are unaffected.
+
 ### Added
 - `jotter mv --from <dir>` — relocate a project's logs across stores, not just rename within one. A project's logs live in whichever `.jotter` store serves its directory, so moving the project between trees that resolve to different stores (e.g. a client tree with its own data repo and a personal tree) orphans its logs in the old store. `--from <old-dir>` resolves the source store from where the project used to live while the destination store resolves from the current directory; the logs are moved across, the removal committed in the source store and the addition in the destination. A cross-store move may keep the same name (the usual case — only the directory's category changed), which a plain same-store rename rejects as a no-op. Without `--from`, `mv` is unchanged.
 

@@ -19,8 +19,9 @@ var lsCmd = &cobra.Command{
 }
 
 func init() {
-	lsCmd.Flags().String("project", "", "List branches for this project")
-	lsCmd.Flags().String("branch", "", "List entries for this branch (requires --project)")
+	lsCmd.Flags().String("project", "", "List branches for this project (default: current git project)")
+	lsCmd.Flags().String("branch", "", "List entries for this branch")
+	lsCmd.Flags().BoolP("all", "a", false, "List every project, ignoring the current repo")
 	lsCmd.Flags().String("since", "", "Only include entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	lsCmd.Flags().String("until", "", "Only include entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	_ = lsCmd.RegisterFlagCompletionFunc("project", completeProjects)
@@ -42,7 +43,7 @@ type projectInfo struct {
 }
 
 func runLs(cmd *cobra.Command, args []string) error {
-	scope, err := resolveScope(cmd)
+	scope, err := resolveScope(cmd, false)
 	if err != nil {
 		return err
 	}
