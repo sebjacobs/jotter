@@ -39,11 +39,13 @@ cmd/
   version.go         -> version/commit/date vars (ldflags-stamped) + formatter
   write.go           -> append JSONL entry + git commit (local only; push is async); registers the data dir; reconciles branch renames on-branch
   mv.go              -> rename a project's logs dir + git commit the move
+  rm.go              -> `jotter rm`/`revert` — remove an entry by id: locate its line, drop it in a forward commit (append-only, sidecar-safe); entryFromCommit guards to real entry commits
   resolve.go         -> resolve --project/--branch from flags or cwd git; onBranch guard for reconciliation
   branch.go          -> `jotter branch` parent: prints current branch (bare)
   branch_mv.go       -> `jotter branch mv` — rename a branch's logs via MoveBranchLogs
   branch_adopt.go    -> `jotter branch adopt` — anchor existing branches for rename tracking
-  tail.go            -> read last N entries, render as markdown
+  tail.go            -> read last N entries, render as markdown (with each entry's short commit id)
+  entryid.go         -> entrySHAs: map a logfile's entries to the commit ids that created them (git blame), shared by tail + search
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
   sync.go            -> fetch + rebase + push; --all walks the registry (skips remoteless repos); syncDataDir + indentWriter for nested per-repo output
@@ -73,7 +75,7 @@ internal/
 - Branch names sanitised: `/` replaced with `+` in filenames
 - Branch identity: a stable id lives in the project repo's git config (`branch.<name>.jotter-id`, survives `git branch -m`) and in a `<branch>.jsonl.id` sidecar; lets renames be followed. Sidecars are invisible to the `*.jsonl` globs
 - Entry types: `start`, `checkpoint`, `note`, `break`, `stop` (session-end; `finish` is a legacy alias still accepted), `handover` (branch-end distillation written onto `main`)
-- Git commit message format: `session: {project}/{branch} {type} {timestamp}`
+- Git commit message format: `session: {project}/{branch} {type} {timestamp}` for a write; `jotter rm` commits the removal as `remove: {project}/{branch} {type} {timestamp} ({id})`
 - Writes commit locally only; pushing is asynchronous — the launchd timer (`jotter daemon`) runs `jotter sync --all` over every registered data repo on an interval. `jotter sync` forces a push now
 - Exit code 1 for user-facing errors (missing files, no results, invalid input)
 

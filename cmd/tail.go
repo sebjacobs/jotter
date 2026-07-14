@@ -54,12 +54,18 @@ func runTail(cmd *cobra.Command, args []string) error {
 		os.Exit(1)
 	}
 
-	// Take the last `limit` entries
-	tail := entries[max(0, len(entries)-limit):]
+	shas := entrySHAs(dataDir, path, len(entries))
+
+	start := max(0, len(entries)-limit)
+	tail := entries[start:]
 
 	formatted := make([]string, len(tail))
 	for i, e := range tail {
-		formatted[i] = internal.FormatEntry(e)
+		id := ""
+		if shas != nil {
+			id = shas[start+i]
+		}
+		formatted[i] = internal.FormatEntryWithID(e, id)
 	}
 	fmt.Println(strings.Join(formatted, "\n\n"))
 	return nil

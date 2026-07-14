@@ -53,13 +53,22 @@ func ReadEntries(path string) ([]Entry, error) {
 		if line == "" {
 			continue
 		}
-		var e Entry
-		if err := json.Unmarshal([]byte(line), &e); err != nil {
+		e, err := ParseEntry(line)
+		if err != nil {
 			return nil, fmt.Errorf("invalid JSONL line: %w", err)
 		}
 		entries = append(entries, e)
 	}
 	return entries, scanner.Err()
+}
+
+// ParseEntry unmarshals a single JSONL line into an Entry.
+func ParseEntry(line string) (Entry, error) {
+	var e Entry
+	if err := json.Unmarshal([]byte(line), &e); err != nil {
+		return Entry{}, err
+	}
+	return e, nil
 }
 
 // MarshalJSONL serialises an entry as a single JSON line with Python-compatible
@@ -89,11 +98,22 @@ func quote(s string) string {
 // FormatEntry renders an entry as markdown with color.
 // Colors are automatically disabled when output is not a terminal.
 func FormatEntry(e Entry) string {
+	return FormatEntryWithID(e, "")
+}
+
+// FormatEntryWithID renders an entry as markdown, appending the entry's short
+// commit id to the heading when id is non-empty (e.g. "| note · a1b2c3d"). The
+// id is the handle a reader feeds to git — or a future `jotter rm` — to act on
+// the commit that created the entry.
+func FormatEntryWithID(e Entry, id string) string {
 	t, _ := time.Parse(time.RFC3339, e.Timestamp)
 	if t.IsZero() {
 		t, _ = time.Parse(TimestampFormat, e.Timestamp)
 	}
 	heading := fmt.Sprintf("## %s | %s", Dim(t.Format("2006-01-02 15:04")), ColorType(e.Type))
+	if id != "" {
+		heading += " " + Dim("· "+id)
+	}
 
 	lines := []string{heading, "", e.Content}
 	if e.Next != "" {

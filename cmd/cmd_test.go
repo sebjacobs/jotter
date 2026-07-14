@@ -315,6 +315,24 @@ func TestWrite_CommitMessageFormat(t *testing.T) {
 	}
 }
 
+func TestWrite_PrintsShortSHA(t *testing.T) {
+	dir := initDataDir(t)
+	stdout, _, code := runJotter(t, dir,
+		"write", "--project", "proj", "--branch", "main",
+		"--type", "start", "--content", "First")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s", code, stdout)
+	}
+	m := regexp.MustCompile(`\(([0-9a-f]{7})\)`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("stdout missing short sha: %s", stdout)
+	}
+	head := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))
+	if !strings.HasPrefix(head, m[1]) {
+		t.Errorf("printed sha %q is not a prefix of HEAD %q", m[1], head)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // tail command
 // ---------------------------------------------------------------------------
@@ -434,6 +452,27 @@ func TestTail_TimestampInHeading(t *testing.T) {
 		"tail", "--project", "proj", "--branch", "main")
 	if !regexp.MustCompile(`## \d{4}-\d{2}-\d{2} \d{2}:\d{2} \| start`).MatchString(stdout) {
 		t.Errorf("timestamp heading not found: %s", stdout)
+	}
+}
+
+func TestTail_ShowsEntryIDResolvingToItsCommit(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "start", "--content", "First")
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "checkpoint", "--content", "Second")
+
+	stdout, _, code := runJotter(t, dir, "tail", "--project", "proj", "--branch", "main")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	m := regexp.MustCompile(`\| checkpoint · ([0-9a-f]{7})`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("tail heading missing entry id: %s", stdout)
+	}
+	subject := strings.TrimSpace(git(t, dir, "show", "-s", "--format=%s", m[1]))
+	if !strings.HasPrefix(subject, "session: proj/main checkpoint") {
+		t.Errorf("id %q resolved to wrong commit: %q", m[1], subject)
 	}
 }
 
@@ -953,12 +992,208 @@ func TestSearch_ProvenancePrefix(t *testing.T) {
 	}
 }
 
+func TestSearch_ShowsEntryIDResolvingToItsCommit(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "database")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	m := regexp.MustCompile(`· ([0-9a-f]{7})`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("search result missing entry id: %s", stdout)
+	}
+	subject := strings.TrimSpace(git(t, dir, "show", "-s", "--format=%s", m[1]))
+	if !strings.Contains(subject, "session:") {
+		t.Errorf("id %q did not resolve to a session commit: %q", m[1], subject)
+	}
+}
+
 func TestSearch_NoResults(t *testing.T) {
 	dir := initDataDir(t)
 	populateSearchData(t, dir)
 	_, _, code := runJotter(t, dir, "search", "nonexistent term")
 	if code == 0 {
 		t.Error("expected non-zero exit code for no results")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// rm command
+// ---------------------------------------------------------------------------
+
+// runJotterStdin is runJotter with stdin wired up, for the rm confirmation prompt.
+func runJotterStdin(t *testing.T, dataDir, stdin string, args ...string) (string, string, int) {
+	t.Helper()
+	workdir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workdir, ".jotter"), fmt.Appendf(nil, "data_dir = %q\n", dataDir), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(binaryPath, args...)
+	cmd.Dir = workdir
+	cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+	cmd.Stdin = strings.NewReader(stdin)
+	var stdout, stderr strings.Builder
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := cmd.Run()
+	exitCode := 0
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			exitCode = exitErr.ExitCode()
+		} else {
+			t.Fatalf("failed to run jotter: %v", err)
+		}
+	}
+	return stdout.String(), stderr.String(), exitCode
+}
+
+// idForType writes then reads back the short id of the last entry of a type.
+func idForType(t *testing.T, dir, project, branch, typ string) string {
+	t.Helper()
+	stdout, _, code := runJotter(t, dir, "tail", "--project", project, "--branch", branch, "-n", "20")
+	if code != 0 {
+		t.Fatalf("tail failed: %s", stdout)
+	}
+	m := regexp.MustCompile(`\| `+typ+` · ([0-9a-f]{7})`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("no %s entry id in tail: %s", typ, stdout)
+	}
+	return m[1]
+}
+
+func TestRm_RemovesMiddleEntry(t *testing.T) {
+	dir := initDataDir(t)
+	for _, c := range []struct{ typ, content string }{
+		{"start", "First"}, {"checkpoint", "Second"}, {"note", "Third"},
+	} {
+		runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+			"--type", c.typ, "--content", c.content)
+	}
+	id := idForType(t, dir, "proj", "main", "checkpoint")
+
+	stdout, stderr, code := runJotter(t, dir, "rm", id, "-f")
+	if code != 0 {
+		t.Fatalf("exit %d, stderr: %s", code, stderr)
+	}
+	if !strings.Contains(stdout, "Removed") {
+		t.Errorf("missing confirmation: %s", stdout)
+	}
+
+	after, _, _ := runJotter(t, dir, "tail", "--project", "proj", "--branch", "main", "-n", "10")
+	if strings.Contains(after, "Second") {
+		t.Errorf("removed entry still present: %s", after)
+	}
+	if !strings.Contains(after, "First") || !strings.Contains(after, "Third") {
+		t.Errorf("neighbouring entries should survive: %s", after)
+	}
+}
+
+func TestRm_ConfirmationAbortsOnNo(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "note", "--content", "Keep me")
+	id := idForType(t, dir, "proj", "main", "note")
+
+	stdout, _, code := runJotterStdin(t, dir, "n\n", "rm", id)
+	if code != 0 {
+		t.Fatalf("abort should exit 0, got %d", code)
+	}
+	if !strings.Contains(stdout, "Aborted") {
+		t.Errorf("expected abort message: %s", stdout)
+	}
+	after, _, _ := runJotter(t, dir, "tail", "--project", "proj", "--branch", "main")
+	if !strings.Contains(after, "Keep me") {
+		t.Errorf("entry should survive an aborted rm: %s", after)
+	}
+}
+
+func TestRm_ConfirmationProceedsOnYes(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "note", "--content", "Remove me")
+	id := idForType(t, dir, "proj", "main", "note")
+
+	stdout, _, code := runJotterStdin(t, dir, "y\n", "rm", id)
+	if code != 0 {
+		t.Fatalf("exit %d", code)
+	}
+	if !strings.Contains(stdout, "Removed") {
+		t.Errorf("expected removal: %s", stdout)
+	}
+	_, _, tailCode := runJotter(t, dir, "tail", "--project", "proj", "--branch", "main")
+	if tailCode == 0 {
+		t.Error("branch log should be empty after removing its only entry")
+	}
+}
+
+func TestRm_RevertAlias(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "note", "--content", "Via alias")
+	id := idForType(t, dir, "proj", "main", "note")
+
+	_, stderr, code := runJotter(t, dir, "revert", id, "-f")
+	if code != 0 {
+		t.Fatalf("revert alias failed: %s", stderr)
+	}
+}
+
+func TestRm_RejectsUnknownID(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code := runJotter(t, dir, "rm", "deadbee", "-f")
+	if code == 0 {
+		t.Error("expected non-zero exit for unknown id")
+	}
+	if !strings.Contains(stderr, "unknown entry id") {
+		t.Errorf("stderr: %s", stderr)
+	}
+}
+
+func TestRm_RejectsNonEntryCommit(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "note", "--content", "hi")
+	initSHA := strings.TrimSpace(git(t, dir, "rev-list", "--max-parents=0", "HEAD"))[:7]
+
+	_, stderr, code := runJotter(t, dir, "rm", initSHA, "-f")
+	if code == 0 {
+		t.Error("expected non-zero exit reverting the init commit")
+	}
+	if !strings.Contains(stderr, "not a jotter entry commit") {
+		t.Errorf("stderr: %s", stderr)
+	}
+}
+
+func TestRm_PreservesSidecarWhenRemovingFirstEntry(t *testing.T) {
+	dir := initDataDir(t)
+	_, stderr, code, workdir := runJotterFromGitRepoWithData(t, dir, "feature/x",
+		"write", "--type", "start", "--content", "First creates sidecar")
+	if code != 0 {
+		t.Fatalf("write exit %d: %s", code, stderr)
+	}
+	runJotterIn(t, workdir, "write", "--type", "checkpoint", "--content", "Second")
+
+	project := filepath.Base(workdir)
+	sidecar := filepath.Join(dir, "logs", project, "feature+x.jsonl.id")
+	if _, err := os.Stat(sidecar); err != nil {
+		t.Fatalf("expected sidecar before rm: %v", err)
+	}
+
+	firstSHA := strings.TrimSpace(git(t, dir, "log", "--format=%h", "--grep", "start", "-1"))
+	if _, _, rmCode := runJotter(t, dir, "rm", firstSHA, "-f"); rmCode != 0 {
+		t.Fatalf("rm of first entry failed")
+	}
+
+	if _, err := os.Stat(sidecar); err != nil {
+		t.Errorf("sidecar must survive removing the first entry: %v", err)
+	}
+	after, _, _ := runJotterIn(t, workdir, "tail", "-n", "5")
+	if strings.Contains(after, "First creates sidecar") {
+		t.Errorf("first entry should be gone: %s", after)
+	}
+	if !strings.Contains(after, "Second") {
+		t.Errorf("second entry should remain: %s", after)
 	}
 }
 
