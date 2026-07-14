@@ -180,6 +180,18 @@ jotter search "deploy" --project myapp --branch main           # scoped search
 
 Filters (`--project`, `--branch`, `--type`, `--since`) can be combined. All filters are AND'd; `--all` widens the default project/branch scope back to everything. Search term is case-insensitive and matches against content and next fields.
 
+### rm
+
+Remove a single entry, identified by the short commit id from `write`/`tail`/`search`. Aliased as `revert`.
+
+```bash
+jotter rm a1b2c3d        # show the entry, confirm, then remove it
+jotter rm a1b2c3d -f     # skip the confirmation prompt
+jotter revert a1b2c3d    # same command
+```
+
+Because the log is append-only, removal is a forward commit that drops the entry's line — never a history rewrite — so the removal is itself reversible and the branch-id sidecar is left untouched (a branch's first entry stays removable). Only entry commits qualify; an id resolving to a rename, relocation, or the init commit is refused. Like every write it commits locally; the push is left to the background timer.
+
 ### sync
 
 Push pending entries to the remote.

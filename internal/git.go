@@ -137,6 +137,65 @@ func GitLineSHAs(dataDir, relPath string) ([]string, error) {
 	return shas, nil
 }
 
+// GitResolveCommit resolves ref (a short id, full sha, or any git revision) to
+// a full commit SHA within the data repo. Returns an error if ref doesn't name
+// a commit, so callers can reject an unknown entry id.
+func GitResolveCommit(dataDir, ref string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "--verify", "--quiet", ref+"^{commit}")
+	cmd.Dir = dataDir
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("no such commit %q", ref)
+	}
+	sha := strings.TrimSpace(string(out))
+	if sha == "" {
+		return "", fmt.Errorf("no such commit %q", ref)
+	}
+	return sha, nil
+}
+
+// GitCommitSubject returns the subject line of the commit named by ref.
+func GitCommitSubject(dataDir, ref string) (string, error) {
+	cmd := exec.Command("git", "show", "-s", "--format=%s", ref)
+	cmd.Dir = dataDir
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git show %s: %w", ref, err)
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// GitAddedLines returns the lines a commit added (the diff's "+" lines, minus
+// the "+++" file header), across all files it touched. For a jotter entry
+// commit that's the single appended JSONL line, letting a caller show what an
+// entry-reverting `rm` is about to remove.
+func GitAddedLines(dataDir, ref string) ([]string, error) {
+	cmd := exec.Command("git", "show", ref, "--format=", "--no-color", "--unified=0")
+	cmd.Dir = dataDir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git show %s: %w", ref, err)
+	}
+	var added []string
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "+") && !strings.HasPrefix(line, "+++") {
+			added = append(added, line[1:])
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return added, nil
+}
+
+// ShortSHA abbreviates a full SHA to jotter's display length.
+func ShortSHA(sha string) string {
+	return abbreviate(sha)
+}
+
 func abbreviate(sha string) string {
 	if len(sha) < shortSHALen {
 		return sha
