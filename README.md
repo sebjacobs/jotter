@@ -142,6 +142,8 @@ jotter tail --project myapp --branch feature/auth              # last entry (def
 jotter tail --project myapp --branch feature/auth --limit 5    # last 5 entries
 ```
 
+Each entry's heading carries the short SHA of the commit that created it (`## 2026-04-16 15:45 | stop · a1b2c3d`), and `jotter write` prints the same id on success. `search` shows it too. Every entry is its own commit in the data repo, so that id is a stable handle — `git show a1b2c3d` in your data repo replays the exact entry.
+
 ### ls
 
 List projects or branches. Inside a git repo, `ls` defaults to the current project's branches; outside one it lists every project.

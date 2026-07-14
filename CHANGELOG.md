@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Every entry now carries the short SHA of the commit that created it. `jotter write` prints it on success (`Wrote start entry to logs/proj/main.jsonl (a1b2c3d)`), and `jotter tail`/`jotter search` append it to each entry's heading (`## 2026-04-16 15:45 | stop · a1b2c3d`). Because each write is its own commit, the id is a stable handle back to the entry — `git show <sha>` in the data repo replays it, and it's the groundwork for a future `jotter rm` that reverts an entry's commit. `tail`/`search` derive the id via `git blame` on the logfile (which follows the branch-rename `git mv`s), and fall back to no id rather than guess if the ids can't be trusted.
+
 ## [v0.18.0] — 2026-07-10
 
 ### Changed

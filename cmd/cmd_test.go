@@ -315,6 +315,24 @@ func TestWrite_CommitMessageFormat(t *testing.T) {
 	}
 }
 
+func TestWrite_PrintsShortSHA(t *testing.T) {
+	dir := initDataDir(t)
+	stdout, _, code := runJotter(t, dir,
+		"write", "--project", "proj", "--branch", "main",
+		"--type", "start", "--content", "First")
+	if code != 0 {
+		t.Fatalf("exit code %d, stdout: %s", code, stdout)
+	}
+	m := regexp.MustCompile(`\(([0-9a-f]{7})\)`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("stdout missing short sha: %s", stdout)
+	}
+	head := strings.TrimSpace(git(t, dir, "rev-parse", "HEAD"))
+	if !strings.HasPrefix(head, m[1]) {
+		t.Errorf("printed sha %q is not a prefix of HEAD %q", m[1], head)
+	}
+}
+
 // ---------------------------------------------------------------------------
 // tail command
 // ---------------------------------------------------------------------------
@@ -434,6 +452,27 @@ func TestTail_TimestampInHeading(t *testing.T) {
 		"tail", "--project", "proj", "--branch", "main")
 	if !regexp.MustCompile(`## \d{4}-\d{2}-\d{2} \d{2}:\d{2} \| start`).MatchString(stdout) {
 		t.Errorf("timestamp heading not found: %s", stdout)
+	}
+}
+
+func TestTail_ShowsEntryIDResolvingToItsCommit(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "start", "--content", "First")
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main",
+		"--type", "checkpoint", "--content", "Second")
+
+	stdout, _, code := runJotter(t, dir, "tail", "--project", "proj", "--branch", "main")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	m := regexp.MustCompile(`\| checkpoint · ([0-9a-f]{7})`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("tail heading missing entry id: %s", stdout)
+	}
+	subject := strings.TrimSpace(git(t, dir, "show", "-s", "--format=%s", m[1]))
+	if !strings.HasPrefix(subject, "session: proj/main checkpoint") {
+		t.Errorf("id %q resolved to wrong commit: %q", m[1], subject)
 	}
 }
 
@@ -950,6 +989,23 @@ func TestSearch_ProvenancePrefix(t *testing.T) {
 	}
 	if !strings.Contains(stdout, "[proj-a/feature.jsonl]") {
 		t.Errorf("missing provenance prefix: %s", stdout)
+	}
+}
+
+func TestSearch_ShowsEntryIDResolvingToItsCommit(t *testing.T) {
+	dir := initDataDir(t)
+	populateSearchData(t, dir)
+	stdout, _, code := runJotter(t, dir, "search", "database")
+	if code != 0 {
+		t.Fatalf("exit code %d", code)
+	}
+	m := regexp.MustCompile(`· ([0-9a-f]{7})`).FindStringSubmatch(stdout)
+	if m == nil {
+		t.Fatalf("search result missing entry id: %s", stdout)
+	}
+	subject := strings.TrimSpace(git(t, dir, "show", "-s", "--format=%s", m[1]))
+	if !strings.Contains(subject, "session:") {
+		t.Errorf("id %q did not resolve to a session commit: %q", m[1], subject)
 	}
 }
 

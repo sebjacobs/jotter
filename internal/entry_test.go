@@ -129,6 +129,32 @@ func TestFormatEntry_WithNext(t *testing.T) {
 	}
 }
 
+func TestFormatEntryWithID_AppendsIDToHeading(t *testing.T) {
+	e := Entry{
+		Timestamp: "2026-04-11T10:30:00",
+		Type:      "note",
+		Content:   "Some observation",
+	}
+	out := FormatEntryWithID(e, "a1b2c3d")
+	if !strings.Contains(out, "## 2026-04-11 10:30 | note · a1b2c3d") {
+		t.Errorf("heading missing id in:\n%s", out)
+	}
+}
+
+func TestFormatEntryWithID_EmptyIDMatchesFormatEntry(t *testing.T) {
+	e := Entry{
+		Timestamp: "2026-04-11T10:30:00",
+		Type:      "start",
+		Content:   "Hello",
+	}
+	if FormatEntryWithID(e, "") != FormatEntry(e) {
+		t.Error("empty id should render identically to FormatEntry")
+	}
+	if strings.Contains(FormatEntryWithID(e, ""), "·") {
+		t.Error("empty id should not add the id separator")
+	}
+}
+
 func TestMarshalJSONL_MatchesPythonFormat(t *testing.T) {
 	e := Entry{
 		Timestamp: "2026-04-11T10:30:00",

@@ -117,6 +117,10 @@ func runWrite(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("git commit: %w", err)
 	}
 
-	fmt.Printf("Wrote %s entry to %s\n", internal.ColorType(entryType), internal.Dim(rel))
+	id := ""
+	if sha, shaErr := internal.GitHeadSHA(dataDir); shaErr == nil {
+		id = " " + internal.Dim("("+sha+")")
+	}
+	fmt.Printf("Wrote %s entry to %s%s\n", internal.ColorType(entryType), internal.Dim(rel), id)
 	return nil
 }

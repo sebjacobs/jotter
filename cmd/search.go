@@ -72,8 +72,9 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		}
 
 		rel, _ := filepath.Rel(logsDir, path)
+		shas := entrySHAs(dataDir, path, len(entries))
 
-		for _, entry := range entries {
+		for i, entry := range entries {
 			if !inWindow(entry.Timestamp, sinceTime, untilTime) {
 				continue
 			}
@@ -92,7 +93,11 @@ func runSearch(cmd *cobra.Command, args []string) error {
 				}
 			}
 
-			results = append(results, fmt.Sprintf("%s\n%s", internal.Dim("["+rel+"]"), internal.FormatEntry(entry)))
+			id := ""
+			if shas != nil {
+				id = shas[i]
+			}
+			results = append(results, fmt.Sprintf("%s\n%s", internal.Dim("["+rel+"]"), internal.FormatEntryWithID(entry, id)))
 		}
 	}
 

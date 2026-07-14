@@ -43,7 +43,8 @@ cmd/
   branch.go          -> `jotter branch` parent: prints current branch (bare)
   branch_mv.go       -> `jotter branch mv` — rename a branch's logs via MoveBranchLogs
   branch_adopt.go    -> `jotter branch adopt` — anchor existing branches for rename tracking
-  tail.go            -> read last N entries, render as markdown
+  tail.go            -> read last N entries, render as markdown (with each entry's short commit id)
+  entryid.go         -> entrySHAs: map a logfile's entries to the commit ids that created them (git blame), shared by tail + search
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
   sync.go            -> fetch + rebase + push; --all walks the registry (skips remoteless repos); syncDataDir + indentWriter for nested per-repo output

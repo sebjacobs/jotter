@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"bufio"
 	"bytes"
 	"errors"
 	"fmt"
@@ -9,6 +10,13 @@ import (
 	"strconv"
 	"strings"
 )
+
+// shortSHALen is the abbreviation length used everywhere jotter surfaces a
+// commit id. Keeping it fixed means the id printed by `write` is byte-for-byte
+// what `tail`/`search` show and what a future `jotter rm` would consume — git
+// resolves any unambiguous prefix, so the same 7 chars round-trip through all
+// three.
+const shortSHALen = 7
 
 // GitProjectName returns the basename of the main repo's toplevel for cwd.
 // Inside a worktree, this is the main repo's directory rather than the
@@ -78,6 +86,71 @@ func GitCommit(dataDir, filePath, message string) error {
 // GitAdd stages a path within the data repo.
 func GitAdd(dataDir, path string) error {
 	return run(dataDir, "git", "add", path)
+}
+
+// GitHeadSHA returns the abbreviated SHA of the data repo's current HEAD. Used
+// by `jotter write` to report the id of the entry it just committed.
+func GitHeadSHA(dataDir string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = dataDir
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("git rev-parse HEAD: %w", err)
+	}
+	return abbreviate(strings.TrimSpace(string(out))), nil
+}
+
+// GitLineSHAs returns the abbreviated SHA of the commit that introduced each
+// non-blank line of the file at relPath (relative to dataDir), in file order.
+// Because entries are appended one-per-commit and never rewritten, blame maps
+// each JSONL line back to the commit that created that entry, following the
+// git mv renames branch-tracking performs. Blank lines are skipped so the
+// result aligns with ReadEntries, which skips them too.
+func GitLineSHAs(dataDir, relPath string) ([]string, error) {
+	cmd := exec.Command("git", "blame", "--porcelain", "--", relPath)
+	cmd.Dir = dataDir
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("git blame %s: %w", relPath, err)
+	}
+
+	var shas []string
+	var current string
+	scanner := bufio.NewScanner(bytes.NewReader(out))
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if len(line) > 40 && line[40] == ' ' && isHex(line[:40]) {
+			current = abbreviate(line[:40])
+			continue
+		}
+		if strings.HasPrefix(line, "\t") {
+			if strings.TrimSpace(line[1:]) == "" {
+				continue
+			}
+			shas = append(shas, current)
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return shas, nil
+}
+
+func abbreviate(sha string) string {
+	if len(sha) < shortSHALen {
+		return sha
+	}
+	return sha[:shortSHALen]
+}
+
+func isHex(s string) bool {
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // GitLocalBranches returns the local branch names in cwd's repo.
