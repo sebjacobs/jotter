@@ -11,6 +11,8 @@ just check                   # build + test + lint — mirrors CI, run before ev
 just build                   # build binary into bin/
 just test                    # run all tests (82 tests)
 just lint                    # golangci-lint (same config as CI)
+just install                 # stamped build copied to $PREFIX/bin (default ~/.local/bin)
+just uninstall               # remove what `just install` put there
 ```
 
 Raw commands if needed:
