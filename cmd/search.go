@@ -24,6 +24,7 @@ func init() {
 	searchCmd.Flags().String("since", "", "Filter entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("until", "", "Filter entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	searchCmd.Flags().String("type", "", "Filter by entry type")
+	addFormatFlag(searchCmd)
 	_ = searchCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = searchCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	_ = searchCmd.RegisterFlagCompletionFunc("type", completeTypes)
@@ -38,6 +39,10 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	since, _ := cmd.Flags().GetString("since")
 	until, _ := cmd.Flags().GetString("until")
 	entryType, _ := cmd.Flags().GetString("type")
+	format, err := outputFormat(cmd)
+	if err != nil {
+		return err
+	}
 
 	var term string
 	if len(args) > 0 {
@@ -65,6 +70,7 @@ func runSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	var results []string
+	var jsonResults []entryJSON
 	for _, path := range paths {
 		entries, err := internal.ReadEntries(path)
 		if err != nil {
@@ -72,6 +78,8 @@ func runSearch(cmd *cobra.Command, args []string) error {
 		}
 
 		rel, _ := filepath.Rel(logsDir, path)
+		project := filepath.Dir(rel)
+		branch := internal.UnsanitiseBranch(strings.TrimSuffix(filepath.Base(rel), ".jsonl"))
 		shas := entrySHAs(dataDir, path, len(entries))
 
 		for i, entry := range entries {
@@ -97,10 +105,17 @@ func runSearch(cmd *cobra.Command, args []string) error {
 			if shas != nil {
 				id = shas[i]
 			}
+			if format == formatJSON {
+				jsonResults = append(jsonResults, newEntryJSON(entry, project, branch, id))
+				continue
+			}
 			results = append(results, fmt.Sprintf("%s\n%s", internal.Dim("["+rel+"]"), internal.FormatEntryWithID(entry, id)))
 		}
 	}
 
+	if format == formatJSON && len(jsonResults) > 0 {
+		return printJSON(jsonResults)
+	}
 	if len(results) == 0 {
 		fmt.Fprintln(os.Stderr, "No matching entries found")
 		os.Exit(1)

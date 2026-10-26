@@ -180,6 +180,18 @@ jotter search "deploy" --project myapp --branch main           # scoped search
 
 Filters (`--project`, `--branch`, `--type`, `--since`) can be combined. All filters are AND'd; `--all` widens the default project/branch scope back to everything. Search term is case-insensitive and matches against content and next fields.
 
+### JSON output
+
+`tail`, `search` and `ls` take `--format md|json`. `md` is the default and is the output shown above; `json` prints a single array for scripts and tools, with no colour codes:
+
+```bash
+jotter tail --limit 5 --format json | jq -r '.[].id'
+jotter search "deploy" --all --format json
+jotter ls --all --format json
+```
+
+`tail` and `search` emit one object per entry — `id`, `project`, `branch`, `timestamp`, `type`, `content` and `next` (`id` and `next` are left out when empty). `ls` emits `{name, last}` per project, `{name, entries, last}` per branch, and `{timestamp, type, title}` per entry. An empty result still exits 1 with a message on stderr, whichever format you pick.
+
 ### rm
 
 Remove a single entry, identified by the short commit id from `write`/`tail`/`search`. Aliased as `revert`.

@@ -19,6 +19,7 @@ func init() {
 	tailCmd.Flags().String("project", "", "Project name (default: basename of the git toplevel)")
 	tailCmd.Flags().String("branch", "", "Branch name (default: current git branch)")
 	tailCmd.Flags().IntP("limit", "n", 1, "Number of entries to return")
+	addFormatFlag(tailCmd)
 	_ = tailCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = tailCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(tailCmd)
@@ -26,6 +27,10 @@ func init() {
 
 func runTail(cmd *cobra.Command, args []string) error {
 	limit, _ := cmd.Flags().GetInt("limit")
+	format, err := outputFormat(cmd)
+	if err != nil {
+		return err
+	}
 
 	project, err := resolveProject(cmd)
 	if err != nil {
@@ -59,13 +64,22 @@ func runTail(cmd *cobra.Command, args []string) error {
 	start := max(0, len(entries)-limit)
 	tail := entries[start:]
 
+	ids := make([]string, len(tail))
+	if shas != nil {
+		copy(ids, shas[start:])
+	}
+
+	if format == formatJSON {
+		out := make([]entryJSON, len(tail))
+		for i, e := range tail {
+			out[i] = newEntryJSON(e, project, branch, ids[i])
+		}
+		return printJSON(out)
+	}
+
 	formatted := make([]string, len(tail))
 	for i, e := range tail {
-		id := ""
-		if shas != nil {
-			id = shas[start+i]
-		}
-		formatted[i] = internal.FormatEntryWithID(e, id)
+		formatted[i] = internal.FormatEntryWithID(e, ids[i])
 	}
 	fmt.Println(strings.Join(formatted, "\n\n"))
 	return nil

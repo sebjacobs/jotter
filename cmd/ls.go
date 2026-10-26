@@ -24,6 +24,7 @@ func init() {
 	lsCmd.Flags().BoolP("all", "a", false, "List every project, ignoring the current repo")
 	lsCmd.Flags().String("since", "", "Only include entries from this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
 	lsCmd.Flags().String("until", "", "Only include entries up to this date/time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS, inclusive)")
+	addFormatFlag(lsCmd)
 	_ = lsCmd.RegisterFlagCompletionFunc("project", completeProjects)
 	_ = lsCmd.RegisterFlagCompletionFunc("branch", completeBranches)
 	rootCmd.AddCommand(lsCmd)
@@ -49,6 +50,10 @@ func runLs(cmd *cobra.Command, args []string) error {
 	}
 	since, _ := cmd.Flags().GetString("since")
 	until, _ := cmd.Flags().GetString("until")
+	format, err := outputFormat(cmd)
+	if err != nil {
+		return err
+	}
 
 	sinceTime, untilTime, err := parseWindow(since, until)
 	if err != nil {
@@ -69,15 +74,15 @@ func runLs(cmd *cobra.Command, args []string) error {
 
 	switch s := scope.(type) {
 	case internal.BranchScope:
-		return lsEntries(dataDir, s.Project, s.Branch, sinceTime, untilTime, windowActive)
+		return lsEntries(dataDir, s.Project, s.Branch, sinceTime, untilTime, windowActive, format)
 	case internal.ProjectScope:
-		return lsBranches(logsDir, s.Project, sinceTime, untilTime, windowActive)
+		return lsBranches(logsDir, s.Project, sinceTime, untilTime, windowActive, format)
 	default:
-		return lsProjects(logsDir, sinceTime, untilTime, windowActive)
+		return lsProjects(logsDir, sinceTime, untilTime, windowActive, format)
 	}
 }
 
-func lsEntries(dataDir, project, branch string, since, until time.Time, windowActive bool) error {
+func lsEntries(dataDir, project, branch string, since, until time.Time, windowActive bool, format string) error {
 	path, err := internal.JSONLPath(dataDir, project, branch)
 	if err != nil {
 		return err
@@ -95,10 +100,22 @@ func lsEntries(dataDir, project, branch string, since, until time.Time, windowAc
 		os.Exit(1)
 	}
 
+	type entryRow struct {
+		Timestamp string `json:"timestamp"`
+		Type      string `json:"type"`
+		Title     string `json:"title"`
+	}
+	var rows []entryRow
+
 	printed := 0
 	for i := len(entries) - 1; i >= 0; i-- {
 		e := entries[i]
 		if !inWindow(e.Timestamp, since, until) {
+			continue
+		}
+		if format == formatJSON {
+			rows = append(rows, entryRow{e.Timestamp, e.Type, entryTitle(e.Content)})
+			printed++
 			continue
 		}
 		t, _ := time.Parse(internal.TimestampFormat, e.Timestamp)
@@ -113,6 +130,9 @@ func lsEntries(dataDir, project, branch string, since, until time.Time, windowAc
 			fmt.Fprintf(os.Stderr, "No entries for %s/%s\n", project, branch)
 		}
 		os.Exit(1)
+	}
+	if format == formatJSON {
+		return printJSON(rows)
 	}
 	return nil
 }
@@ -140,7 +160,7 @@ func entryTitle(content string) string {
 	return ""
 }
 
-func lsBranches(logsDir, project string, since, until time.Time, windowActive bool) error {
+func lsBranches(logsDir, project string, since, until time.Time, windowActive bool, format string) error {
 	projectDir := filepath.Join(logsDir, project)
 	if _, err := os.Stat(projectDir); os.IsNotExist(err) {
 		fmt.Fprintf(os.Stderr, "No logs for project %s\n", project)
@@ -171,6 +191,19 @@ func lsBranches(logsDir, project string, since, until time.Time, windowActive bo
 		return strings.Compare(b.lastTS, a.lastTS)
 	})
 
+	if format == formatJSON {
+		type branchRow struct {
+			Name    string `json:"name"`
+			Entries int    `json:"entries"`
+			Last    string `json:"last,omitempty"`
+		}
+		rows := make([]branchRow, len(branches))
+		for i, b := range branches {
+			rows[i] = branchRow{b.name, b.count, b.lastTS}
+		}
+		return printJSON(rows)
+	}
+
 	for _, b := range branches {
 		if b.lastDate != "" {
 			fmt.Printf("%s  %s\n", internal.Bold(b.name), internal.Dim(fmt.Sprintf("(%d entries, last: %s)", b.count, b.lastDate)))
@@ -197,7 +230,7 @@ func branchInfoFromEntries(name string, entries []internal.Entry, since, until t
 	return bi
 }
 
-func lsProjects(logsDir string, since, until time.Time, windowActive bool) error {
+func lsProjects(logsDir string, since, until time.Time, windowActive bool, format string) error {
 	entries, err := os.ReadDir(logsDir)
 	if err != nil {
 		return err
@@ -244,6 +277,18 @@ func lsProjects(logsDir string, since, until time.Time, windowActive bool) error
 	slices.SortFunc(projects, func(a, b projectInfo) int {
 		return strings.Compare(b.lastTS, a.lastTS)
 	})
+
+	if format == formatJSON {
+		type projectRow struct {
+			Name string `json:"name"`
+			Last string `json:"last,omitempty"`
+		}
+		rows := make([]projectRow, len(projects))
+		for i, p := range projects {
+			rows[i] = projectRow{p.name, p.lastTS}
+		}
+		return printJSON(rows)
+	}
 
 	for _, p := range projects {
 		if p.lastDate != "" {

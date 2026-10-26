@@ -47,6 +47,7 @@ cmd/
   branch_mv.go       -> `jotter branch mv` — rename a branch's logs via MoveBranchLogs
   branch_adopt.go    -> `jotter branch adopt` — anchor existing branches for rename tracking
   tail.go            -> read last N entries, render as markdown (with each entry's short commit id)
+  format.go          -> shared --format md|json flag for tail/search/ls; entryJSON shape + printJSON
   entryid.go         -> entrySHAs: map a logfile's entries to the commit ids that created them (git blame), shared by tail + search
   ls.go              -> list projects/branches with metadata
   search.go          -> filter entries by term, type, date, scope
