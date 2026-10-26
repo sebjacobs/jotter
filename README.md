@@ -230,6 +230,16 @@ jotter daemon uninstall                # remove it
 
 The agent's label defaults to `com.jotter`. If you manage your launchd agents under a single reverse-DNS prefix (e.g. a service manager that globs `<prefix>.*`), export `LAUNCHD_PREFIX` and jotter names its agent `<prefix>.jotter` so it joins that set — `LAUNCHD_PREFIX=com.example` yields `com.example.jotter`. `jotter daemon status` prints the resolved label. The variable is purely opt-in; unset, jotter uses `com.jotter` and nothing else is required.
 
+### mcp
+
+Run an [MCP](https://modelcontextprotocol.io) server over stdio, so an MCP client can read and write the log through tool calls.
+
+```bash
+claude mcp add jotter -- jotter mcp    # register it with Claude Code
+```
+
+It exposes four tools, each a thin wrapper over the matching command: `jotter_write`, `jotter_tail`, `jotter_search` and `jotter_ls`. Their arguments mirror the command flags (`project`, `branch`, `type`, `content`, `next`, `limit`, `term`, `since`, `until`, `all`), and they return the same plain-text output. Each call runs jotter as a subprocess from the server's working directory, so `project` and `branch` default to the repo the client launched it in, the same as on the command line. A failing command comes back as a tool error carrying its message. Destructive and machine-level commands (`rm`, `mv`, `sync`, `setup`, `daemon`) are deliberately not exposed.
+
 ### project
 
 Print the current project name.
