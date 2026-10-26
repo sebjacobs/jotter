@@ -55,6 +55,7 @@ cmd/
   daemon.go          -> `jotter daemon` parent + install/uninstall/status wiring; daemonManager adapts to setup.DaemonManager; renderPlist lives in daemon_darwin.go
   daemon_darwin.go   -> launchd impl: plist render/write, launchctl load/unload, install/uninstall/status, daemonInstalled (build tag: darwin)
   daemon_other.go    -> non-darwin stubs returning "macOS only" (build tag: !darwin)
+  mcp.go             -> `jotter mcp` — stdio MCP server (go-sdk); each tool re-execs the jotter binary with the matching flags and returns its output
   config.go          -> print resolved .jotter data_dir for current cwd
   completion.go      -> bash/zsh/fish completion generator
   setup.go           -> `jotter setup` wizard driver; huhPrompter (huh-backed Prompter impl); injects daemonManager

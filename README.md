@@ -230,6 +230,50 @@ jotter daemon uninstall                # remove it
 
 The agent's label defaults to `com.jotter`. If you manage your launchd agents under a single reverse-DNS prefix (e.g. a service manager that globs `<prefix>.*`), export `LAUNCHD_PREFIX` and jotter names its agent `<prefix>.jotter` so it joins that set — `LAUNCHD_PREFIX=com.example` yields `com.example.jotter`. `jotter daemon status` prints the resolved label. The variable is purely opt-in; unset, jotter uses `com.jotter` and nothing else is required.
 
+### mcp
+
+Run an [MCP](https://modelcontextprotocol.io) server over stdio, so an MCP client can read and write the log through tool calls.
+
+```bash
+jotter mcp    # speaks MCP on stdin/stdout; an MCP client launches it for you
+```
+
+It exposes four tools, each a thin wrapper over the matching command: `jotter_write`, `jotter_tail`, `jotter_search` and `jotter_ls`. Their arguments mirror the command flags (`project`, `branch`, `type`, `content`, `next`, `limit`, `term`, `since`, `until`, `all`), and they return the same plain-text output. Each call runs jotter as a subprocess from the server's working directory, so `project` and `branch` default to the repo the client launched it in, the same as on the command line. A failing command comes back as a tool error carrying its message. Destructive and machine-level commands (`rm`, `mv`, `sync`, `setup`, `daemon`) are deliberately not exposed.
+
+#### Registering with a client
+
+**Claude Code** — `--scope user` makes it available in every project; without it the server is registered for the current directory only.
+
+```bash
+claude mcp add --scope user jotter -- jotter mcp
+```
+
+**Codex CLI** — writes a `[mcp_servers.jotter]` table to `~/.codex/config.toml`.
+
+```bash
+codex mcp add jotter -- jotter mcp
+```
+
+```toml
+[mcp_servers.jotter]
+command = "jotter"
+args = ["mcp"]
+```
+
+**ChatGPT desktop** — shares its MCP configuration with Codex, so the `codex mcp add` above covers it. To add it by hand instead: Settings → MCP servers → Add server → STDIO, command `jotter`, argument `mcp`.
+
+**Claude Desktop** — add it to `~/Library/Application Support/Claude/claude_desktop_config.json` and restart the app.
+
+```json
+{
+  "mcpServers": {
+    "jotter": { "command": "/opt/homebrew/bin/jotter", "args": ["mcp"] }
+  }
+}
+```
+
+Two things differ for the desktop apps. They don't inherit your shell's `PATH`, so give the absolute path to the binary (`which jotter`). And they launch the server outside any repo, so there's no project or branch to default to — pass `project` and `branch` on every call. The data dir still resolves to `~/.jotter`. The terminal clients launch the server in the repo you're working in, so the defaults apply there.
+
 ### project
 
 Print the current project name.
