@@ -24,6 +24,23 @@ type entryJSON struct {
 	Next      string `json:"next,omitempty"`
 }
 
+type projectJSON struct {
+	Name string `json:"name"`
+	Last string `json:"last,omitempty"`
+}
+
+type branchJSON struct {
+	Name    string `json:"name"`
+	Entries int    `json:"entries"`
+	Last    string `json:"last,omitempty"`
+}
+
+type entryTitleJSON struct {
+	Timestamp string `json:"timestamp"`
+	Type      string `json:"type"`
+	Title     string `json:"title"`
+}
+
 func newEntryJSON(e internal.Entry, project, branch, id string) entryJSON {
 	return entryJSON{
 		ID:        id,
