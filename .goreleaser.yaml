@@ -67,6 +67,7 @@ changelog:
   disable: true
 
 release:
+  replace_existing_artifacts: true
   header: |
     See [CHANGELOG.md](https://github.com/sebjacobs/jotter/blob/main/CHANGELOG.md) for the full list of changes.
 
