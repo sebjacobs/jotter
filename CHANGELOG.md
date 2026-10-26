@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [v0.19.0] — 2026-10-26
+
 ### Added
 - `jotter mcp` runs an MCP server over stdio, exposing `write`, `tail`, `search` and `ls` as the tools `jotter_write`, `jotter_tail`, `jotter_search` and `jotter_ls`. Register it with `claude mcp add --scope user jotter -- jotter mcp` (the README also covers Codex CLI, ChatGPT desktop and Claude Desktop). Each tool call runs the matching command as a subprocess, so behaviour (including `--project`/`--branch` defaulting from the working directory) is identical to the CLI, and a command that exits non-zero comes back as a tool error rather than taking the server down. `jotter_tail`, `jotter_search` and `jotter_ls` return structured content with an output schema, built from `--format json`. Built on the official Go SDK ([modelcontextprotocol/go-sdk](https://github.com/modelcontextprotocol/go-sdk)). `rm`, `mv`, `sync`, `setup` and `daemon` are not exposed.
 - `--format md|json` on `jotter tail`, `jotter search` and `jotter ls`. `md` is the default and leaves today's output unchanged; `json` prints a single array with no colour codes, so scripts and other tools can read results without parsing markdown. `tail`/`search` objects carry `id`, `project`, `branch`, `timestamp`, `type`, `content` and `next`; `ls` returns projects, branches or entries depending on scope.
@@ -188,7 +190,10 @@ First tagged release. Captures the existing command surface as the baseline and 
 - `CHANGELOG.md` (this file) and `CONTRIBUTING.md` documenting the release process.
 - Existing command surface — `write`, `tail`, `ls`, `search`, `config`, `completion` — folded in as the initial shipped feature set.
 
-[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.16.1...HEAD
+[Unreleased]: https://github.com/sebjacobs/jotter/compare/v0.19.0...HEAD
+[v0.19.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.19.0
+[v0.18.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.18.0
+[v0.17.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.17.0
 [v0.16.1]: https://github.com/sebjacobs/jotter/releases/tag/v0.16.1
 [v0.16.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.16.0
 [v0.15.0]: https://github.com/sebjacobs/jotter/releases/tag/v0.15.0
