@@ -21,7 +21,9 @@ var mcpCmd = &cobra.Command{
 		"Protocol tools over stdin/stdout, so an MCP client such as Claude Code can\n" +
 		"read and write the log without shelling out.\n\n" +
 		"Register it with:\n\n" +
-		"  claude mcp add jotter -- jotter mcp\n\n" +
+		"  claude mcp add --scope user jotter -- jotter mcp    # Claude Code\n" +
+		"  codex mcp add jotter -- jotter mcp                  # Codex CLI, ChatGPT desktop\n\n" +
+		"See the README for Claude Desktop.\n\n" +
 		"Each tool call runs the matching jotter command as a subprocess, so project\n" +
 		"and branch default from the server's working directory exactly as they do\n" +
 		"on the command line.",
