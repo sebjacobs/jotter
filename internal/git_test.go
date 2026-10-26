@@ -203,3 +203,18 @@ func TestGitLineSHAs_SkipsBlankLines(t *testing.T) {
 		t.Errorf("got %v, want %v — blank line should be skipped to stay aligned with ReadEntries", got, want)
 	}
 }
+
+func TestGitLineSHAs_IgnoresConfiguredIgnoreRevsFile(t *testing.T) {
+	dir := initRepo(t)
+	rel := "logs/proj/main.jsonl"
+	one := appendCommit(t, dir, rel, `{"content":"one"}`)
+	mustGit(t, dir, "config", "blame.ignoreRevsFile", ".git-blame-ignore-revs")
+
+	got, err := GitLineSHAs(dir, rel)
+	if err != nil {
+		t.Fatalf("GitLineSHAs: %v", err)
+	}
+	if len(got) != 1 || got[0] != one {
+		t.Errorf("got %v, want [%s]", got, one)
+	}
+}

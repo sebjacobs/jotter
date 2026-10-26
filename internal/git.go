@@ -107,7 +107,7 @@ func GitHeadSHA(dataDir string) (string, error) {
 // git mv renames branch-tracking performs. Blank lines are skipped so the
 // result aligns with ReadEntries, which skips them too.
 func GitLineSHAs(dataDir, relPath string) ([]string, error) {
-	cmd := exec.Command("git", "blame", "--porcelain", "--", relPath)
+	cmd := exec.Command("git", "blame", "--no-ignore-revs-file", "--porcelain", "--", relPath)
 	cmd.Dir = dataDir
 	out, err := cmd.Output()
 	if err != nil {
