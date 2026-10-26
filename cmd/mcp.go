@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -93,6 +94,18 @@ func boolFlag(name string, on bool) []string {
 	return []string{name}
 }
 
+type entriesOutput struct {
+	Entries []entryJSON `json:"entries" jsonschema:"matching entries, oldest first"`
+}
+
+type lsOutput struct {
+	Projects []projectJSON    `json:"projects,omitempty" jsonschema:"set when listing projects"`
+	Branches []branchJSON     `json:"branches,omitempty" jsonschema:"set when listing a project's branches"`
+	Entries  []entryTitleJSON `json:"entries,omitempty" jsonschema:"set when listing a branch's entries, newest first"`
+}
+
+var jsonFormat = []string{"--format", formatJSON}
+
 func newMCPServer() *mcp.Server {
 	server := mcp.NewServer(&mcp.Implementation{Name: "jotter", Version: version}, nil)
 
@@ -108,19 +121,21 @@ func newMCPServer() *mcp.Server {
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "jotter_tail",
 		Description: "Show the most recent jotter entries for a project branch, newest last.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in tailArgs) (*mcp.CallToolResult, any, error) {
-		args := []string{"tail"}
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in tailArgs) (*mcp.CallToolResult, entriesOutput, error) {
+		args := append([]string{"tail"}, jsonFormat...)
 		if in.Limit > 0 {
 			args = append(args, "--limit", strconv.Itoa(in.Limit))
 		}
-		return runJotterTool(ctx, append(args, in.flags()...))
+		var out entriesOutput
+		err := runJotterJSON(ctx, append(args, in.flags()...), &out.Entries)
+		return nil, out, err
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "jotter_search",
 		Description: "Search jotter entries by text, type and date. Defaults to the current project and branch.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in searchArgs) (*mcp.CallToolResult, any, error) {
-		args := []string{"search"}
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in searchArgs) (*mcp.CallToolResult, entriesOutput, error) {
+		args := append([]string{"search"}, jsonFormat...)
 		args = appendFlag(args, "--type", in.Type)
 		args = append(args, boolFlag("--all", in.All)...)
 		args = append(args, in.scopeArgs.flags()...)
@@ -128,18 +143,21 @@ func newMCPServer() *mcp.Server {
 		if in.Term != "" {
 			args = append(args, "--", in.Term)
 		}
-		return runJotterTool(ctx, args)
+		var out entriesOutput
+		err := runJotterJSON(ctx, args, &out.Entries)
+		return nil, out, err
 	})
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "jotter_ls",
 		Description: "List logged projects, the branches of a project, or the entries of a branch.",
-	}, func(ctx context.Context, _ *mcp.CallToolRequest, in lsArgs) (*mcp.CallToolResult, any, error) {
-		args := []string{"ls"}
+	}, func(ctx context.Context, _ *mcp.CallToolRequest, in lsArgs) (*mcp.CallToolResult, lsOutput, error) {
+		args := append([]string{"ls"}, jsonFormat...)
 		args = append(args, boolFlag("--all", in.All)...)
 		args = append(args, in.scopeArgs.flags()...)
 		args = append(args, in.windowArgs.flags()...)
-		return runJotterTool(ctx, args)
+		out, err := runJotterLs(ctx, args)
+		return nil, out, err
 	})
 
 	return server
@@ -150,9 +168,49 @@ func runMCP(cmd *cobra.Command, _ []string) error {
 }
 
 func runJotterTool(ctx context.Context, args []string) (*mcp.CallToolResult, any, error) {
+	out, errOut, err := execJotter(ctx, args)
+	if err != nil {
+		return nil, nil, err
+	}
+	text := out
+	if errOut != "" {
+		text = strings.TrimSpace(text + "\n\n" + errOut)
+	}
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
+}
+
+func runJotterJSON(ctx context.Context, args []string, v any) error {
+	out, _, err := execJotter(ctx, args)
+	if err != nil {
+		return err
+	}
+	if err := json.Unmarshal([]byte(out), v); err != nil {
+		return fmt.Errorf("decoding jotter %s output: %w", args[0], err)
+	}
+	return nil
+}
+
+func runJotterLs(ctx context.Context, args []string) (lsOutput, error) {
+	var out lsOutput
+	var rows []map[string]json.RawMessage
+	if err := runJotterJSON(ctx, args, &rows); err != nil || len(rows) == 0 {
+		return out, err
+	}
+
+	raw, _ := json.Marshal(rows)
+	var target any = &out.Projects
+	if _, ok := rows[0]["timestamp"]; ok {
+		target = &out.Entries
+	} else if _, ok := rows[0]["entries"]; ok {
+		target = &out.Branches
+	}
+	return out, json.Unmarshal(raw, target)
+}
+
+func execJotter(ctx context.Context, args []string) (string, string, error) {
 	self, err := os.Executable()
 	if err != nil {
-		return nil, nil, fmt.Errorf("locating jotter binary: %w", err)
+		return "", "", fmt.Errorf("locating jotter binary: %w", err)
 	}
 
 	var stdout, stderr bytes.Buffer
@@ -167,7 +225,7 @@ func runJotterTool(ctx context.Context, args []string) (*mcp.CallToolResult, any
 
 	var exitErr *exec.ExitError
 	if runErr != nil && !errors.As(runErr, &exitErr) {
-		return nil, nil, fmt.Errorf("running jotter %s: %w", args[0], runErr)
+		return "", "", fmt.Errorf("running jotter %s: %w", args[0], runErr)
 	}
 	if runErr != nil {
 		errOut, _, _ = strings.Cut(errOut, "\nUsage:")
@@ -175,15 +233,7 @@ func runJotterTool(ctx context.Context, args []string) (*mcp.CallToolResult, any
 		if msg == "" {
 			msg = runErr.Error()
 		}
-		return &mcp.CallToolResult{
-			IsError: true,
-			Content: []mcp.Content{&mcp.TextContent{Text: msg}},
-		}, nil, nil
+		return "", "", errors.New(msg)
 	}
-
-	text := out
-	if errOut != "" {
-		text = strings.TrimSpace(text + "\n\n" + errOut)
-	}
-	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}, nil, nil
+	return out, errOut, nil
 }
