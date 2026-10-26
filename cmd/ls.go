@@ -100,12 +100,7 @@ func lsEntries(dataDir, project, branch string, since, until time.Time, windowAc
 		os.Exit(1)
 	}
 
-	type entryRow struct {
-		Timestamp string `json:"timestamp"`
-		Type      string `json:"type"`
-		Title     string `json:"title"`
-	}
-	var rows []entryRow
+	var rows []entryTitleJSON
 
 	printed := 0
 	for i := len(entries) - 1; i >= 0; i-- {
@@ -114,7 +109,7 @@ func lsEntries(dataDir, project, branch string, since, until time.Time, windowAc
 			continue
 		}
 		if format == formatJSON {
-			rows = append(rows, entryRow{e.Timestamp, e.Type, entryTitle(e.Content)})
+			rows = append(rows, entryTitleJSON{e.Timestamp, e.Type, entryTitle(e.Content)})
 			printed++
 			continue
 		}
@@ -192,14 +187,9 @@ func lsBranches(logsDir, project string, since, until time.Time, windowActive bo
 	})
 
 	if format == formatJSON {
-		type branchRow struct {
-			Name    string `json:"name"`
-			Entries int    `json:"entries"`
-			Last    string `json:"last,omitempty"`
-		}
-		rows := make([]branchRow, len(branches))
+		rows := make([]branchJSON, len(branches))
 		for i, b := range branches {
-			rows[i] = branchRow{b.name, b.count, b.lastTS}
+			rows[i] = branchJSON{b.name, b.count, b.lastTS}
 		}
 		return printJSON(rows)
 	}
@@ -279,13 +269,9 @@ func lsProjects(logsDir string, since, until time.Time, windowActive bool, forma
 	})
 
 	if format == formatJSON {
-		type projectRow struct {
-			Name string `json:"name"`
-			Last string `json:"last,omitempty"`
-		}
-		rows := make([]projectRow, len(projects))
+		rows := make([]projectJSON, len(projects))
 		for i, p := range projects {
-			rows[i] = projectRow{p.name, p.lastTS}
+			rows[i] = projectJSON{p.name, p.lastTS}
 		}
 		return printJSON(rows)
 	}

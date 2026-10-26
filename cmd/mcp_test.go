@@ -2,6 +2,7 @@ package cmd_test
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -126,5 +127,93 @@ func TestMCP_CommandFailureIsToolErrorWithoutUsage(t *testing.T) {
 
 	if _, isErr = callTool(t, s, "jotter_ls", map[string]any{"all": true}); !isErr {
 		t.Error("expected ls on an empty data dir to be a tool error")
+	}
+}
+
+func callToolStructured(t *testing.T, s *mcp.ClientSession, name string, args map[string]any) map[string][]map[string]any {
+	t.Helper()
+	res, err := s.CallTool(context.Background(), &mcp.CallToolParams{Name: name, Arguments: args})
+	if err != nil {
+		t.Fatalf("calling %s: %v", name, err)
+	}
+	if res.IsError {
+		t.Fatalf("%s returned a tool error: %v", name, res.Content)
+	}
+	raw, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var out map[string][]map[string]any
+	if err := json.Unmarshal(raw, &out); err != nil {
+		t.Fatalf("%s structured content is not an object of arrays: %v\n%s", name, err, raw)
+	}
+	return out
+}
+
+func TestMCP_ReadToolsDeclareOutputSchemas(t *testing.T) {
+	s := startMCP(t, initDataDir(t))
+	res, err := s.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tool := range res.Tools {
+		if tool.Name == "jotter_write" {
+			continue
+		}
+		if tool.OutputSchema == nil {
+			t.Errorf("%s has no output schema", tool.Name)
+		}
+	}
+}
+
+func TestMCP_TailReturnsStructuredEntries(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main", "--type", "stop", "--content", "Done", "--next", "Ship")
+	s := startMCP(t, dir)
+
+	got := callToolStructured(t, s, "jotter_tail", map[string]any{"project": "proj", "branch": "main"})
+	entries := got["entries"]
+	if len(entries) != 1 {
+		t.Fatalf("entries = %v", got)
+	}
+	e := entries[0]
+	if e["type"] != "stop" || e["content"] != "Done" || e["next"] != "Ship" || e["project"] != "proj" || e["branch"] != "main" {
+		t.Errorf("entry = %v", e)
+	}
+	if id, _ := e["id"].(string); len(id) != 7 {
+		t.Errorf("id = %v", e["id"])
+	}
+}
+
+func TestMCP_SearchReturnsStructuredEntries(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main", "--type", "note", "--content", "needle here")
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main", "--type", "note", "--content", "haystack")
+	s := startMCP(t, dir)
+
+	got := callToolStructured(t, s, "jotter_search", map[string]any{"term": "needle", "all": true})
+	if len(got["entries"]) != 1 || got["entries"][0]["content"] != "needle here" {
+		t.Errorf("search = %v", got)
+	}
+}
+
+func TestMCP_LsReturnsStructuredRowsForEachScope(t *testing.T) {
+	dir := initDataDir(t)
+	runJotter(t, dir, "write", "--project", "proj", "--branch", "main", "--type", "note", "--content", "First line\nmore")
+	s := startMCP(t, dir)
+
+	projects := callToolStructured(t, s, "jotter_ls", map[string]any{"all": true})["projects"]
+	if len(projects) != 1 || projects[0]["name"] != "proj" {
+		t.Errorf("projects = %v", projects)
+	}
+
+	branches := callToolStructured(t, s, "jotter_ls", map[string]any{"project": "proj"})["branches"]
+	if len(branches) != 1 || branches[0]["name"] != "main" || branches[0]["entries"] != float64(1) {
+		t.Errorf("branches = %v", branches)
+	}
+
+	entries := callToolStructured(t, s, "jotter_ls", map[string]any{"project": "proj", "branch": "main"})["entries"]
+	if len(entries) != 1 || entries[0]["title"] != "First line" || entries[0]["type"] != "note" {
+		t.Errorf("entries = %v", entries)
 	}
 }
